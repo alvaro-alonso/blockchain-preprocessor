@@ -1,10 +1,9 @@
 on: [push, pull_request]
 
-name: Tests
+name: Prover
 
 jobs:
-  tests:
-    name: tests
+  setup:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -19,7 +18,22 @@ jobs:
           toolchain: nightly
           override: true
           components: rustfmt, clippy
+
+  lint:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-rs/cargo@v1
+        with:
+          run: fmt --all -- --check
+      - uses: actions-rs/cargo@v1
+        with:
+          run: clippy -- -D warnings
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions-rs/cargo@v1
         with:
           run: test
-      
