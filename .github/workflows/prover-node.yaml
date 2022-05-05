@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./prover-node
+        working-directory: prover-node
     steps:
       # `rustup` will need `curl` or `wget` later
       - run: apt-get update && apt-get install -y curl
