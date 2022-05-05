@@ -1,10 +1,10 @@
 on: [push, pull_request]
 
-name: Lints
+name: Tests
 
 jobs:
-  clippy:
-    name: Clippy
+  tests:
+    name: tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -21,7 +21,5 @@ jobs:
           components: rustfmt, clippy
       - uses: actions-rs/cargo@v1
         with:
-          run: fmt --all -- --check
-      - uses: actions-rs/cargo@v1
-        with:
-          run: clippy -- -D warnings
+          run: test
+      
