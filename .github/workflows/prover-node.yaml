@@ -7,8 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # `rustup` will need `curl` or `wget` later
-      - run: apt-get update
-      - run: sudo apt-get install -y curl
+      - run: sudo apt-get update && apt-get install -y curl
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
