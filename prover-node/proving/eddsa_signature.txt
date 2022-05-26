@@ -1,0 +1,13 @@
+# link to pycrypto: https://github.com/Zokrates/pycrypto#create-and-verify-an-eddsa-signature
+
+PrivateKey
+292715a5c4a121dcc078f6b707fc4574d3fa04cd7deabbcbc515a08a82047da3 
+
+PublicKey
+9c3e4bb7deef61de913d7c08d7a26a2a633aa06560bce044765591b7a9a02391
+
+string to sign
+11dd22
+
+signature
+94ba58cf9465d84923af2876d16c4ad30e0020091abb6db335da047db6308d0d 266e15e1fa107dcf1918a7ca5e4fe85190bfb201d14394d37d3a6a4fccedf7f2
