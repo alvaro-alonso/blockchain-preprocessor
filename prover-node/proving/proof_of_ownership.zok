@@ -4,7 +4,8 @@ import "ecc/babyjubjubParams" as context
 
 
 def main(private field[2] R, private field S, field[2] A, u32[8] M0, u32[8] M1) -> (bool):
-
+    
+    //Verify Signature (R,S) with PupKey (A) on Hash (M0, M1)
     BabyJubJubParams context = context()
     bool isVerified = verifyEddsa(R, S, A, M0, M1, context)
     assert(isVerified)
