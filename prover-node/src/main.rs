@@ -3,6 +3,8 @@
 use rocket::serde::{Serialize, Deserialize, json::Json};
 
 #[cfg(test)] mod tests;
+mod generate_proof;
+use generate_proof::post_generate_proof;
 
 #[derive(Serialize)]
 #[derive(Deserialize)]
@@ -27,4 +29,5 @@ fn new(task: Json<Task>) -> Json<Task> {
 fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![index, new])
+        .mount("/generate-proof", routes![post_generate_proof])
 }
