@@ -10,4 +10,6 @@ version = "0.5.0-rc.1"
 features = ["json"]
 
 [dependencies]
+serde_json = { version = "1.0", features = ["preserve_order"] }
 zokrates_core = { version = "0.6", path = "./zokrates/zokrates_core", default-features = false }
+zokrates_field = { version = "0.5.1", path = "./zokrates/zokrates_field", default-features = false }
