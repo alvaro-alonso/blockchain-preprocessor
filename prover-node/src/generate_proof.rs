@@ -6,10 +6,11 @@ use std::io::{BufReader, Read, Write};
 use std::path::Path;
 use zokrates_core::ir;
 use zokrates_core::ir::ProgEnum;
-#[cfg(feature = "libsnark")]
-use zokrates_core::proof_system::libsnark::Libsnark;
 use zokrates_core::proof_system::*;
 use zokrates_field::Field;
+#[cfg(feature = "ark")]
+use zokrates_core::proof_system::ark::Ark;
+
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -34,11 +35,12 @@ pub fn post_generate_proof(
     let mut reader = BufReader::new(program_file);
     let prog = ProgEnum::deserialize(&mut reader)
         .map_err(|e| NotFound(e.to_string()))?;
+    println!("deserialization successfull");
 
-    #[cfg(feature = "libsnark")]
+    #[cfg(feature = "ark")]
     match prog {
         ProgEnum::Bn128Program(p) => {
-            cli_generate_proof::<_, _, SchemeParameter::GM17, Libsnark>(&pk_path);
+            cli_generate_proof::<_, _, SchemeParameter::GM17, Ark>(&pk_path);
         }
         _ => unreachable!(),
     }
