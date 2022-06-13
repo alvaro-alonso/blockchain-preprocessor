@@ -8,8 +8,9 @@ use zokrates_core::ir;
 use zokrates_core::ir::ProgEnum;
 use zokrates_core::proof_system::*;
 use zokrates_field::Field;
-#[cfg(feature = "ark")]
+// #[cfg(feature = "ark")]
 use zokrates_core::proof_system::ark::Ark;
+use zokrates_core::proof_system::GM17;
 
 
 #[derive(Deserialize)]
@@ -37,10 +38,11 @@ pub fn post_generate_proof(
         .map_err(|e| NotFound(e.to_string()))?;
     println!("deserialization successfull");
 
-    #[cfg(feature = "ark")]
+    // #[cfg(feature = "ark")]
     match prog {
         ProgEnum::Bn128Program(p) => {
-            cli_generate_proof::<_, _, SchemeParameter::GM17, Ark>(&pk_path);
+            cli_generate_proof::<_, _, GM17, Ark>(p)
+                .map_err(|e| NotFound(e.to_string()))?;
         }
         _ => unreachable!(),
     }
@@ -65,10 +67,11 @@ fn cli_generate_proof<
         .map_err(|why| format!("Could not open {}: {}", witness_path.display(), why))?;
     let witness = ir::Witness::read(witness_file)
         .map_err(|why| format!("Could not load witness: {:?}", why))?;
+    println!("read witness successfully");
 
     // read proving key
     let pk_path = Path::new("proving/proving.key");
-    let proof_path = Path::new(".");
+    let proof_path = Path::new("proving/trial.json");
     let pk_file = File::open(&pk_path)
         .map_err(|why| format!("Could not open {}: {}", pk_path.display(), why))?;
 
@@ -77,6 +80,7 @@ fn cli_generate_proof<
     pk_reader
         .read_to_end(&mut pk)
         .map_err(|why| format!("Could not read {}: {}", pk_path.display(), why))?;
+    println!("read proving key successfully");
 
     let proof = B::generate_proof(program, witness, pk);
     let mut proof_file = File::create(proof_path).unwrap();
