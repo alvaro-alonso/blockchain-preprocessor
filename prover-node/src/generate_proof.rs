@@ -21,7 +21,9 @@ pub struct GenerateProofRequestBody {
 
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
-pub struct GenerateProofResponseBody {}
+pub struct GenerateProofResponseBody {
+    payload: serde_json::Value,
+}
 
 #[post("/", data = "<task>", format = "json")]
 pub fn post_generate_proof(
@@ -41,14 +43,15 @@ pub fn post_generate_proof(
     // #[cfg(feature = "ark")]
     match prog {
         ProgEnum::Bn128Program(p) => {
-            cli_generate_proof::<_, _, GM17, Ark>(p)
+            let proof_str = cli_generate_proof::<_, _, GM17, Ark>(p)
                 .map_err(|e| NotFound(e.to_string()))?;
+            let proof_obj = serde_json::from_str(&proof_str).unwrap();
+            Ok(Json(GenerateProofResponseBody {
+                payload: proof_obj,
+            }))
         }
         _ => unreachable!(),
     }
-    
-    Ok(Json(GenerateProofResponseBody {}))
-
  }
 
 fn cli_generate_proof<
@@ -58,7 +61,7 @@ fn cli_generate_proof<
     B: Backend<T, S>
 >(
     program: ir::ProgIterator<T, I>,
-) -> Result<(), String> {
+) -> Result<String, String> {
     println!("Generating proof...");
     
     // read witness
@@ -94,7 +97,7 @@ fn cli_generate_proof<
     println!("Proof:\n{}", proof);
 
     println!("Proof written to '{}'", proof_path.display());
-    Ok(())
+    Ok(proof)
 }
 
 use rocket::local::blocking::Client;
