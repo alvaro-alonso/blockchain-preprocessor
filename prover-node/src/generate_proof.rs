@@ -2,13 +2,12 @@
 use rocket::serde::{Serialize, Deserialize, json::Json};
 use rocket::response::status::NotFound;
 use std::fs::File;
-use std::io::{BufReader, Read, Write};
+use std::io::{BufReader, Read};
 use std::path::Path;
 use zokrates_core::ir;
 use zokrates_core::ir::ProgEnum;
 use zokrates_core::proof_system::*;
 use zokrates_field::Field;
-// #[cfg(feature = "ark")]
 use zokrates_core::proof_system::ark::Ark;
 use zokrates_core::proof_system::GM17;
 
@@ -43,11 +42,16 @@ pub fn post_generate_proof(
     // #[cfg(feature = "ark")]
     match prog {
         ProgEnum::Bn128Program(p) => {
-            let proof_str = cli_generate_proof::<_, _, GM17, Ark>(p)
+            let proof = cli_generate_proof::<_, _, GM17, Ark>(p)
                 .map_err(|e| NotFound(e.to_string()))?;
-            let proof_obj = serde_json::from_str(&proof_str).unwrap();
+
+            let proof_str =
+                serde_json::to_string_pretty(&proof).unwrap();
+            println!("Proof:\n{}", proof_str);
+            let proof = serde_json::from_str(&proof_str).unwrap();
+            
             Ok(Json(GenerateProofResponseBody {
-                payload: proof_obj,
+                payload: proof,
             }))
         }
         _ => unreachable!(),
@@ -61,7 +65,7 @@ fn cli_generate_proof<
     B: Backend<T, S>
 >(
     program: ir::ProgIterator<T, I>,
-) -> Result<String, String> {
+) -> Result<TaggedProof<T, S>, String> {
     println!("Generating proof...");
     
     // read witness
@@ -74,7 +78,6 @@ fn cli_generate_proof<
 
     // read proving key
     let pk_path = Path::new("proving/proving.key");
-    let proof_path = Path::new("proving/trial.json");
     let pk_file = File::open(&pk_path)
         .map_err(|why| format!("Could not open {}: {}", pk_path.display(), why))?;
 
@@ -86,31 +89,20 @@ fn cli_generate_proof<
     println!("read proving key successfully");
 
     let proof = B::generate_proof(program, witness, pk);
-    let mut proof_file = File::create(proof_path).unwrap();
-
-    let proof =
-        serde_json::to_string_pretty(&TaggedProof::<T, S>::new(proof.proof, proof.inputs)).unwrap();
-    proof_file
-        .write(proof.as_bytes())
-        .map_err(|why| format!("Could not write to {}: {}", proof_path.display(), why))?;
-
-    println!("Proof:\n{}", proof);
-
-    println!("Proof written to '{}'", proof_path.display());
-    Ok(proof)
+    Ok(TaggedProof::<T, S>::new(proof.proof, proof.inputs))
 }
 
-use rocket::local::blocking::Client;
-use rocket::http::{Status, ContentType};
+// #[cfg(test)] use rocket::local::blocking::Client;
+// #[cfg(test)] use rocket::http::{Status, ContentType};
 
- #[test]
-fn test_post_generate_proof() {
-    let client = Client::tracked(super::rocket()).unwrap();
-    let res = client.post("/generate-proof")
-        .header(ContentType::JSON)
-        .body(r##"{
-            "proving_key": "ridicolous text"
-        }"##)
-        .dispatch();
-    assert_eq!(res.status(), Status::Ok);
-}
+//  #[test]
+// fn test_post_generate_proof() {
+//     let client = Client::tracked(super::rocket()).unwrap();
+//     let res = client.post("/generate-proof")
+//         .header(ContentType::JSON)
+//         .body(r##"{
+//             "proving_key": "ridicolous text"
+//         }"##)
+//         .dispatch();
+//     assert_eq!(res.status(), Status::Ok);
+// }
