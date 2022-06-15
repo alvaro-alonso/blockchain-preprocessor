@@ -1,6 +1,6 @@
 Run prover-node api:
 ```bash
-$ cargo run
+$ cargo +nightly run
 ```
 
 Run tests:
