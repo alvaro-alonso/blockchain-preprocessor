@@ -30,3 +30,16 @@ fn rocket() -> _ {
             post_generate_proof,
         ])
 }
+
+#[cfg(test)]
+mod test {
+    use rocket::local::blocking::Client;
+    use rocket::http::{Status, ContentType};
+
+    #[test]
+    fn json_test_index() {
+        let client = Client::tracked(super::rocket()).unwrap();
+        let res = client.get("/").header(ContentType::JSON).dispatch();
+        assert_eq!(res.status(), Status::Ok);
+    }
+}
