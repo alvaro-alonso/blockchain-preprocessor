@@ -2,7 +2,8 @@
 
 use rocket::serde::{Serialize, Deserialize, json::Json};
 
-#[cfg(test)] mod tests;
+mod compile;
+use compile::post_compile_zokrates;
 mod generate_proof;
 use generate_proof::post_generate_proof;
 
@@ -20,14 +21,12 @@ fn index() -> Json<Task> {
     })
 }
 
-#[post("/", data = "<task>", format = "json")]
-fn new(task: Json<Task>) -> Json<Task> { 
-    task
- }
-
 #[launch]
 fn rocket() -> _ {
     rocket::build()
-        .mount("/", routes![index, new])
-        .mount("/generate-proof", routes![post_generate_proof])
+        .mount("/", routes![
+            index,
+            post_compile_zokrates,
+            post_generate_proof,
+        ])
 }

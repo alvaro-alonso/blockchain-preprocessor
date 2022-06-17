@@ -21,10 +21,11 @@ pub struct GenerateProofRequestBody {
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
 pub struct GenerateProofResponseBody {
+    // TODO: serialize TaggedProof
     payload: serde_json::Value,
 }
 
-#[post("/", data = "<task>", format = "json")]
+#[post("/generate-proof", data = "<task>", format = "json")]
 pub fn post_generate_proof(
     task: Json<GenerateProofRequestBody>
 ) -> Result<Json<GenerateProofResponseBody>, NotFound<String>> { 
@@ -42,7 +43,7 @@ pub fn post_generate_proof(
     // #[cfg(feature = "ark")]
     match prog {
         ProgEnum::Bn128Program(p) => {
-            let proof = cli_generate_proof::<_, _, GM17, Ark>(p)
+            let proof = generate_proof::<_, _, GM17, Ark>(p)
                 .map_err(|e| NotFound(e.to_string()))?;
 
             let proof_str =
@@ -58,7 +59,7 @@ pub fn post_generate_proof(
     }
  }
 
-fn cli_generate_proof<
+fn generate_proof<
     T: Field,
     I: Iterator<Item = ir::Statement<T>>,
     S: Scheme<T>,
@@ -92,9 +93,11 @@ fn cli_generate_proof<
     Ok(TaggedProof::<T, S>::new(proof.proof, proof.inputs))
 }
 
+// FIXME: add unittest for route
 // #[cfg(test)] use rocket::local::blocking::Client;
 // #[cfg(test)] use rocket::http::{Status, ContentType};
 
+// mock generate_proof function
 //  #[test]
 // fn test_post_generate_proof() {
 //     let client = Client::tracked(super::rocket()).unwrap();
@@ -105,4 +108,11 @@ fn cli_generate_proof<
 //         }"##)
 //         .dispatch();
 //     assert_eq!(res.status(), Status::Ok);
+// }
+
+//  #[test]
+// fn test_generate_proof() {
+//     let proof = let proof = generate_proof::<_, _, GM17, Ark>(p)
+                // .map_err(|e| NotFound(e.to_string()))?;
+//     assert_eq!(proof, blablabla);
 // }

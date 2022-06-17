@@ -13,3 +13,7 @@ features = ["json"]
 serde_json = { version = "1.0", features = ["preserve_order"] }
 zokrates_core = { version = "0.6", path = "./zokrates/zokrates_core", default-features = false, features=["ark"] }
 zokrates_field = { version = "0.5.1", path = "./zokrates/zokrates_field", default-features = false }
+zokrates_common = { version = "0.1.0", path = "./zokrates/zokrates_common", default-features = false }
+zokrates_fs_resolver = { version = "0.5.2", path = "./zokrates/zokrates_fs_resolver", default-features = false }
+log = "0.4"
+typed-arena = "1.4.1"
