@@ -1,6 +1,5 @@
-
-use rocket::serde::{Serialize, Deserialize, json::Json};
 use rocket::response::status::NotFound;
+use rocket::serde::{json::Json, Deserialize, Serialize};
 use serde_json::to_writer_pretty;
 use std::convert::TryFrom;
 use std::fs::File;
@@ -13,11 +12,10 @@ use zokrates_core::compile::{compile, CompileConfig, CompileError};
 use zokrates_field::{Bn128Field, Field};
 use zokrates_fs_resolver::FileSystemResolver;
 
-
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct CompileRequestBody {
-    program: String
+    program: String,
 }
 
 #[derive(Serialize)]
@@ -26,8 +24,8 @@ pub struct CompileResponseBody {}
 
 #[post("/compile", data = "<task>", format = "json")]
 pub fn post_compile_zokrates(
-    task: Json<CompileRequestBody>
-) -> Result<Json<CompileResponseBody>, NotFound<String>> { 
+    task: Json<CompileRequestBody>,
+) -> Result<Json<CompileResponseBody>, NotFound<String>> {
     match api_compile::<Bn128Field>() {
         Ok(_) => Ok(Json(CompileResponseBody {})),
         Err(str) => Err(NotFound(str)),
@@ -69,10 +67,9 @@ fn api_compile<T: Field>() -> Result<(), String> {
         )),
     }?;
 
-    let config =
-        CompileConfig::default();
+    let config = CompileConfig::default();
 
-    let resolver =  FileSystemResolver::with_stdlib_root(stdlib_path);
+    let resolver = FileSystemResolver::with_stdlib_root(stdlib_path);
 
     log::debug!("Compile");
 
@@ -143,6 +140,6 @@ fn api_compile<T: Field>() -> Result<(), String> {
 //  #[test]
 // fn test_generate_proof() {
 //     let proof = let proof = generate_proof::<_, _, GM17, Ark>(p)
-                // .map_err(|e| NotFound(e.to_string()))?;
+// .map_err(|e| NotFound(e.to_string()))?;
 //     assert_eq!(proof, blablabla);
 // }
