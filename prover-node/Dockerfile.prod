@@ -1,0 +1,21 @@
+FROM rustlang/rust:nightly-alpine3.15 as build
+
+WORKDIR /app
+
+COPY ./Cargo.lock ./Cargo.lock
+COPY ./Cargo.toml ./Cargo.toml
+COPY ./zokrates ./zokrates
+COPY ./src ./src
+
+RUN apk add --no-cache musl-dev
+
+RUN cargo build --release
+
+FROM alpine:3.16.0 as runner
+
+RUN apk update \
+    && apk add --no-cache ca-certificates tzdata
+
+COPY --from=build /app/target/release /
+
+ENTRYPOINT [ "./prover-node" ]
