@@ -1,40 +1,38 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::serde::{Serialize, Deserialize, json::Json};
+use rocket::serde::{json::Json, Deserialize, Serialize};
 
 mod compile;
 use compile::post_compile_zokrates;
 mod generate_proof;
 use generate_proof::post_generate_proof;
 
-#[derive(Serialize)]
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 struct Task {
-    message: String
+    message: String,
 }
 
 #[get("/", format = "json")]
 fn index() -> Json<Task> {
-    Json(Task { 
-        message: String::from("Hello, world!") 
+    Json(Task {
+        message: String::from("Hello, world!"),
     })
 }
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build()
-        .mount("/", routes![
-            index,
-            post_compile_zokrates,
-            post_generate_proof,
-        ])
+    rocket::build().mount(
+        "/",
+        routes![index, post_compile_zokrates, post_generate_proof,],
+    )
 }
 
 #[cfg(test)]
 mod test {
+    use rocket::http::{ContentType, Status};
     use rocket::local::blocking::Client;
-    use rocket::http::{Status, ContentType};
 
     #[test]
     fn json_test_index() {

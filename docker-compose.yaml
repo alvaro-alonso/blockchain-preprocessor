@@ -1,0 +1,18 @@
+version: "3.4"
+
+services:
+  
+  prover:
+
+    container_name: "prover-node"
+    command: cargo watch -x run
+    build:
+      dockerfile: Dockerfile.local
+      context: prover-node
+      cache_from:
+        - rustlang/rust:nightly-alpine3.15
+    volumes:
+      - ./prover-node:/app
+    ports:
+      - 8000:8000
+    
