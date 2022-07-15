@@ -15,5 +15,6 @@ zokrates_core = { version = "0.6", path = "./zokrates/zokrates_core", default-fe
 zokrates_field = { version = "0.5.1", path = "./zokrates/zokrates_field", default-features = false }
 zokrates_common = { version = "0.1.0", path = "./zokrates/zokrates_common", default-features = false }
 zokrates_fs_resolver = { version = "0.5.2", path = "./zokrates/zokrates_fs_resolver", default-features = false }
+zokrates_stdlib = { version = "0.2.8", path = "./zokrates/zokrates_stdlib", default-features = false }
 log = "0.4"
 typed-arena = "1.4.1"

@@ -1,13 +1,10 @@
 use rocket::response::status::NotFound;
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use serde_json::to_writer_pretty;
-use std::convert::TryFrom;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read};
+use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use typed_arena::Arena;
-use zokrates_common::constants::BN128;
-use zokrates_common::helpers::CurveParameter;
 use zokrates_core::compile::{compile, CompileConfig, CompileError};
 use zokrates_field::{Bn128Field, Field};
 use zokrates_fs_resolver::FileSystemResolver;
@@ -22,30 +19,22 @@ pub struct CompileRequestBody {
 #[serde(crate = "rocket::serde")]
 pub struct CompileResponseBody {}
 
-#[post("/compile", data = "<task>", format = "json")]
+#[post("/compile", data = "<req_body>", format = "json")]
 pub fn post_compile_zokrates(
-    task: Json<CompileRequestBody>,
+    req_body: Json<CompileRequestBody>,
 ) -> Result<Json<CompileResponseBody>, NotFound<String>> {
-    match api_compile::<Bn128Field>() {
+    match api_compile::<Bn128Field>(req_body.program.clone()) {
         Ok(_) => Ok(Json(CompileResponseBody {})),
         Err(str) => Err(NotFound(str)),
     }
 }
 
-fn api_compile<T: Field>() -> Result<(), String> {
-    println!("Compiling proving/proof_of_ownership.zok\n");
-    let path = PathBuf::from("proving/proof_of_ownership.zok");
+fn api_compile< T: Field>(code: String) -> Result<(), String> {
+    // FIXME: add filesystem; path is currently not used, it just needed for compile method.
+    let path = PathBuf::from("proving/proof.json");
     let bin_output_path = Path::new("out/compile_out");
     let abi_spec_path = Path::new("abi.json");
-
-    log::debug!("Load entry point file {}", path.display());
-
-    let file = File::open(path.clone())
-        .map_err(|why| format!("Could not open {}: {}", path.display(), why))?;
-
-    let mut reader = BufReader::new(file);
-    let mut source = String::new();
-    reader.read_to_string(&mut source).unwrap();
+    let program = code.to_string();
 
     let fmt_error = |e: &CompileError| {
         let file = e.file().canonicalize().unwrap();
@@ -58,7 +47,7 @@ fn api_compile<T: Field>() -> Result<(), String> {
         )
     };
 
-    let stdlib_path = "/home/zokrates/.zokrates/stdlib]";
+    let stdlib_path = "zokrates/zokrates_stdlib/stdlib";
     match Path::new(stdlib_path).exists() {
         true => Ok(()),
         _ => Err(format!(
@@ -76,7 +65,7 @@ fn api_compile<T: Field>() -> Result<(), String> {
     let arena = Arena::new();
 
     let artifacts =
-        compile::<T, _>(source, path, Some(&resolver), config, &arena).map_err(|e| {
+        compile::<T, _>(program, path, Some(&resolver), config, &arena).map_err(|e| {
             format!(
                 "Compilation failed:\n\n{}",
                 e.0.iter()
