@@ -31,8 +31,8 @@ pub fn post_compile_zokrates(
 
 fn api_compile< T: Field>(code: String) -> Result<(), String> {
     // FIXME: add filesystem; path is currently not used, it just needed for compile method.
-    let path = PathBuf::from("proving/proof.json");
-    let bin_output_path = Path::new("out/compile_out");
+    let path = PathBuf::from("proving/proof_of_ownership.zok");
+    let bin_output_path = Path::new("proving/out/compile_out");
     let abi_spec_path = Path::new("abi.json");
     let program = code.to_string();
 
