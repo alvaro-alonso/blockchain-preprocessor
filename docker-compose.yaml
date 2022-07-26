@@ -5,7 +5,9 @@ services:
   prover:
 
     container_name: "prover-node"
-    command: cargo watch -x run
+    environment: 
+      RUST_MIN_STACK: 8388608
+    command: cargo +nightly watch -x run
     build:
       dockerfile: Dockerfile.local
       context: prover-node
