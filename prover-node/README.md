@@ -11,7 +11,7 @@ $ RUST_MIN_STACK=838860 cargo +nightly run
 ```
 Or with hot-loading:
 ```bash
-$ RUST_MIN_STACK=838860 cargo watch -x run
+$ RUST_MIN_STACK=838860 cargo +nightly watch -x run
 ```
 
 # testing
