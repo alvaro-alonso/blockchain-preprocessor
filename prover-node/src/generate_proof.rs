@@ -13,7 +13,7 @@ use zokrates_field::Field;
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct GenerateProofRequestBody {
-    proving_key: String,
+    // proving_key: String,
 }
 
 #[derive(Serialize)]
@@ -23,9 +23,10 @@ pub struct GenerateProofResponseBody {
     payload: serde_json::Value,
 }
 
-#[post("/generate-proof", data = "<task>", format = "json")]
+// TODO: add generate proof from request arguments
+#[post("/generate-proof", format = "json")] //, data = "<task>"
 pub fn post_generate_proof(
-    task: Json<GenerateProofRequestBody>,
+    // task: Json<GenerateProofRequestBody>,
 ) -> Result<Json<GenerateProofResponseBody>, NotFound<String>> {
     // parse input program
     let program_path = Path::new("proving/proof_of_ownership");
