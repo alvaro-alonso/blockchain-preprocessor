@@ -7,6 +7,8 @@ mod compile;
 use compile::post_compile_zokrates;
 mod generate_proof;
 use generate_proof::post_generate_proof;
+mod compute_witness;
+use compute_witness::post_witness;
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -25,7 +27,12 @@ fn index() -> Json<Task> {
 fn rocket() -> _ {
     rocket::build().mount(
         "/",
-        routes![index, post_compile_zokrates, post_generate_proof,],
+        routes![
+            index, 
+            post_compile_zokrates, 
+            post_generate_proof,
+            post_witness,
+        ],
     )
 }
 

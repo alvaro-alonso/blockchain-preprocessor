@@ -32,8 +32,8 @@ pub fn post_compile_zokrates(
 fn api_compile< T: Field>(code: String) -> Result<(), String> {
     // FIXME: add filesystem; path is currently not used, it just needed for compile method.
     let path = PathBuf::from("proving/proof_of_ownership.zok");
-    let bin_output_path = Path::new("proving/out/compile_out");
-    let abi_spec_path = Path::new("abi.json");
+    let bin_output_path = Path::new("out/compile_out");
+    let abi_spec_path = Path::new("out/abi.json");
     let program = code.to_string();
 
     let fmt_error = |e: &CompileError| {
@@ -95,9 +95,9 @@ fn api_compile< T: Field>(code: String) -> Result<(), String> {
             to_writer_pretty(&mut writer, &abi)
                 .map_err(|_| "Unable to write data to file.".to_string())?;
 
-            println!("Compiled code written to '{}'", bin_output_path.display());
+            log::info!("Compiled code written to '{}'", bin_output_path.display());
 
-            println!("Number of constraints: {}", constraint_count);
+            log::info!("Number of constraints: {}", constraint_count);
 
             Ok(())
         }
