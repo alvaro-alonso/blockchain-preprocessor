@@ -6,6 +6,7 @@ use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use typed_arena::Arena;
 use zokrates_core::compile::{compile, CompileConfig, CompileError};
+use zokrates_core::typed_absy::abi::Abi;
 use zokrates_field::{Bn128Field, Field};
 use zokrates_fs_resolver::FileSystemResolver;
 
@@ -17,19 +18,23 @@ pub struct CompileRequestBody {
 
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
-pub struct CompileResponseBody {}
+pub struct CompileResponseBody {
+    abi: Abi,
+}
 
 #[post("/compile", data = "<req_body>", format = "json")]
 pub fn post_compile_zokrates(
     req_body: Json<CompileRequestBody>,
 ) -> Result<Json<CompileResponseBody>, NotFound<String>> {
     match api_compile::<Bn128Field>(req_body.program.clone()) {
-        Ok(_) => Ok(Json(CompileResponseBody {})),
+        Ok(abi) => Ok(Json(CompileResponseBody {
+            abi,
+        })),
         Err(str) => Err(NotFound(str)),
     }
 }
 
-fn api_compile< T: Field>(code: String) -> Result<(), String> {
+fn api_compile< T: Field>(code: String) -> Result<Abi, String> {
     // FIXME: add filesystem; path is currently not used, it just needed for compile method.
     let path = PathBuf::from("proving/proof_of_ownership.zok");
     let bin_output_path = Path::new("out/compile_out");
@@ -99,7 +104,7 @@ fn api_compile< T: Field>(code: String) -> Result<(), String> {
 
             log::info!("Number of constraints: {}", constraint_count);
 
-            Ok(())
+            Ok(abi)
         }
         Err(e) => {
             // something wrong happened, clean up
