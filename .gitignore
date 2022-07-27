@@ -4,6 +4,9 @@
 prover-node/target/
 prover-node/zokrates/zokrates_core/target
 
+# output folder of endpoints
+prover-node/out
+
 # Remove Cargo.lock from gitignore if creating an executable, leave it for libraries
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
 Cargo.lock
