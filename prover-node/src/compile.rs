@@ -21,6 +21,7 @@ pub struct CompileRequestBody {
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
 pub struct CompileResponseBody {
+    proof_id: String,
     abi: Abi,
 }
 
@@ -30,14 +31,12 @@ pub fn post_compile_zokrates(
 ) -> Result<Json<CompileResponseBody>, NotFound<String>> {
     // FIXME: remove clone for static pointer
     match api_compile::<Bn128Field>(req_body.program.clone()) {
-        Ok(abi) => Ok(Json(CompileResponseBody {
-            abi,
-        })),
+        Ok(resp) => Ok(Json(resp)),
         Err(str) => Err(NotFound(str)),
     }
 }
 
-fn api_compile< T: Field>(code: String) -> Result<Abi, String> {
+fn api_compile< T: Field>(code: String) -> Result<CompileResponseBody, String> {
     let hash = format!("{:X}", Sha256::digest(&code));
     let path = Path::new(relative!("out")).join(&hash);
     if path.is_dir() {
@@ -109,7 +108,10 @@ fn api_compile< T: Field>(code: String) -> Result<Abi, String> {
             log::info!("Compiled code written to '{}'", bin_output_path.display());
             log::info!("abi file written to '{}'", abi_spec_path.display());
             log::info!("Number of constraints: {}", constraint_count);
-            Ok(abi)
+            Ok(CompileResponseBody {
+                proof_id: hash,
+                abi,
+            })
         }
         Err(e) => {
             // something wrong happened, clean up
