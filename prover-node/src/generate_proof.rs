@@ -30,12 +30,10 @@ pub fn post_generate_proof(
 ) -> Result<Json<GenerateProofResponseBody>, NotFound<String>> {
     // parse input program
     let program_path = Path::new("proving/proof_of_ownership");
-    println!("hello!");
     let program_file = File::open(&program_path).map_err(|e| NotFound(e.to_string()))?;
-    println!("file read successfully");
     let mut reader = BufReader::new(program_file);
     let prog = ProgEnum::deserialize(&mut reader).map_err(|e| NotFound(e.to_string()))?;
-    println!("deserialization successfull");
+    log::debug!("deserialization successfull");
 
     // #[cfg(feature = "ark")]
     match prog {
@@ -44,7 +42,7 @@ pub fn post_generate_proof(
                 generate_proof::<_, _, GM17, Ark>(p).map_err(|e| NotFound(e.to_string()))?;
 
             let proof_str = serde_json::to_string_pretty(&proof).unwrap();
-            println!("Proof:\n{}", proof_str);
+            log::debug!("Proof:\n{}", proof_str);
             let proof = serde_json::from_str(&proof_str).unwrap();
 
             Ok(Json(GenerateProofResponseBody { payload: proof }))
@@ -61,7 +59,7 @@ fn generate_proof<
 >(
     program: ir::ProgIterator<T, I>,
 ) -> Result<TaggedProof<T, S>, String> {
-    println!("Generating proof...");
+    log::info!("Generating proof...");
 
     // read witness
     let witness_path = Path::new("proving/witness");
@@ -69,7 +67,7 @@ fn generate_proof<
         .map_err(|why| format!("Could not open {}: {}", witness_path.display(), why))?;
     let witness = ir::Witness::read(witness_file)
         .map_err(|why| format!("Could not load witness: {:?}", why))?;
-    println!("read witness successfully");
+    log::debug!("read witness successfully");
 
     // read proving key
     let pk_path = Path::new("proving/proving.key");
@@ -81,7 +79,7 @@ fn generate_proof<
     pk_reader
         .read_to_end(&mut pk)
         .map_err(|why| format!("Could not read {}: {}", pk_path.display(), why))?;
-    println!("read proving key successfully");
+    log::debug!("read proving key successfully");
 
     let proof = B::generate_proof(program, witness, pk);
     Ok(TaggedProof::<T, S>::new(proof.proof, proof.inputs))
