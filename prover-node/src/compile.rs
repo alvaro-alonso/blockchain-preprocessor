@@ -1,10 +1,12 @@
 use rocket::response::status::NotFound;
 use rocket::serde::{json::Json, Deserialize, Serialize};
+use rocket::fs::{relative};
 use serde_json::to_writer_pretty;
-use std::fs::File;
+use std::fs::{File, create_dir, write};
 use std::io::BufWriter;
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use typed_arena::Arena;
+use sha2::{Sha256, Digest};
 use zokrates_core::compile::{compile, CompileConfig, CompileError};
 use zokrates_core::typed_absy::abi::Abi;
 use zokrates_field::{Bn128Field, Field};
@@ -26,6 +28,7 @@ pub struct CompileResponseBody {
 pub fn post_compile_zokrates(
     req_body: Json<CompileRequestBody>,
 ) -> Result<Json<CompileResponseBody>, NotFound<String>> {
+    // FIXME: remove clone for static pointer
     match api_compile::<Bn128Field>(req_body.program.clone()) {
         Ok(abi) => Ok(Json(CompileResponseBody {
             abi,
@@ -35,10 +38,15 @@ pub fn post_compile_zokrates(
 }
 
 fn api_compile< T: Field>(code: String) -> Result<Abi, String> {
-    // FIXME: add filesystem; path is currently not used, it just needed for compile method.
-    let path = PathBuf::from("proving/proof_of_ownership.zok");
-    let bin_output_path = Path::new("out/compile_out");
-    let abi_spec_path = Path::new("out/abi.json");
+    let hash = format!("{:X}", Sha256::digest(&code));
+    let path = Path::new(relative!("out")).join(&hash);
+    if path.is_dir() {
+        return Err(String::from("proof already exists"))
+    } 
+    
+    let program_path = path.join("program.zok");
+    let bin_output_path = path.join("out");
+    let abi_spec_path = path.join("abi.json");
     let program = code.to_string();
 
     let fmt_error = |e: &CompileError| {
@@ -62,15 +70,11 @@ fn api_compile< T: Field>(code: String) -> Result<Abi, String> {
     }?;
 
     let config = CompileConfig::default();
-
     let resolver = FileSystemResolver::with_stdlib_root(stdlib_path);
-
     log::debug!("Compile");
-
     let arena = Arena::new();
-
     let artifacts =
-        compile::<T, _>(program, path, Some(&resolver), config, &arena).map_err(|e| {
+        compile::<T, _>(program.clone(), program_path.clone(), Some(&resolver), config, &arena).map_err(|e| {
             format!(
                 "Compilation failed:\n\n{}",
                 e.0.iter()
@@ -81,29 +85,30 @@ fn api_compile< T: Field>(code: String) -> Result<Abi, String> {
         })?;
 
     let (program_flattened, abi) = artifacts.into_inner();
-
+    // after successful compilation create proof folder and write all outputs
+    create_dir(&path).map_err(|e| e.to_string())?;
     // serialize flattened program and write to binary file
     log::debug!("Serialize program");
     let bin_output_file = File::create(&bin_output_path)
         .map_err(|why| format!("Could not create {}: {}", bin_output_path.display(), why))?;
-
     let mut writer = BufWriter::new(bin_output_file);
 
     match program_flattened.serialize(&mut writer) {
         Ok(constraint_count) => {
+        
+            write(&program_path, program).expect("Unable to write .zok file");
             // serialize ABI spec and write to JSON file
             log::debug!("Serialize ABI");
             let abi_spec_file = File::create(&abi_spec_path)
                 .map_err(|why| format!("Could not create {}: {}", abi_spec_path.display(), why))?;
-
             let mut writer = BufWriter::new(abi_spec_file);
             to_writer_pretty(&mut writer, &abi)
                 .map_err(|_| "Unable to write data to file.".to_string())?;
 
+            log::info!("zokrates program written to '{}'", program_path.display());
             log::info!("Compiled code written to '{}'", bin_output_path.display());
-
+            log::info!("abi file written to '{}'", abi_spec_path.display());
             log::info!("Number of constraints: {}", constraint_count);
-
             Ok(abi)
         }
         Err(e) => {
