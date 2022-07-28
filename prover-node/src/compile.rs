@@ -1,4 +1,3 @@
-use rocket::response::status::NotFound;
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::fs::{relative};
 use serde_json::to_writer_pretty;
@@ -11,6 +10,7 @@ use zokrates_core::compile::{compile, CompileConfig, CompileError};
 use zokrates_core::typed_absy::abi::Abi;
 use zokrates_field::{Bn128Field, Field};
 use zokrates_fs_resolver::FileSystemResolver;
+use prover_node::utils::errors::{ApiResult, ApiError};
 
 
 #[derive(Deserialize)]
@@ -29,13 +29,13 @@ pub struct CompileResponseBody {
 #[post("/compile", data = "<req_body>", format = "json")]
 pub fn post_compile_zokrates(
     req_body: Json<CompileRequestBody>,
-) -> Result<Json<CompileResponseBody>, NotFound<String>> {
+) -> ApiResult<CompileResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
     let program = req_body.program.clone();
     let hash = format!("{:X}", Sha256::digest(&program));
     let path = Path::new(relative!("out")).join(&hash);
     if path.is_dir() {
-        return Err(NotFound(String::from("proof already exists")))
+        return Err(ApiError::ProofAlreadyExists(String::from("proof already exists")))
     } 
 
     // create all file paths
@@ -46,7 +46,7 @@ pub fn post_compile_zokrates(
 
     // compile .zok code
     let (program_flattened, abi) =  api_compile::<Bn128Field>(&program, &program_path, &arena)
-        .map_err(|e| NotFound(e))?;
+        .map_err(|e| ApiError::CompilationError(e))?;
         
     // if compilation successful write .zok, binary and abi file under the hash folder
     let write_outputs = || -> Result<usize, String> {
@@ -89,7 +89,7 @@ pub fn post_compile_zokrates(
         Err(e) => {
             // something wrong happened, clean up
             remove_dir_all(path).unwrap();
-            Err(NotFound(e.to_string()))
+            Err(ApiError::InternalError(e.to_string()))
         },
     }
 }

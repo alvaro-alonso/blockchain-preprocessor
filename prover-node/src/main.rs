@@ -10,6 +10,7 @@ use generate_proof::post_generate_proof;
 mod compute_witness;
 use compute_witness::post_witness;
 
+
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 struct Task {
