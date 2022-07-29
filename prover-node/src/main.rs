@@ -3,12 +3,8 @@ extern crate rocket;
 
 use rocket::serde::{json::Json, Deserialize, Serialize};
 
-mod compile;
-use compile::post_compile_zokrates;
-mod generate_proof;
-use generate_proof::post_generate_proof;
-mod compute_witness;
-use compute_witness::post_witness;
+mod routes;
+use routes::*;
 
 
 #[derive(Serialize, Deserialize)]
@@ -30,9 +26,9 @@ fn rocket() -> _ {
         "/",
         routes![
             index, 
-            post_compile_zokrates, 
-            post_generate_proof,
-            post_witness,
+            compile::post_compile_zokrates, 
+            generate_proof::post_generate_proof,
+            compute_witness::post_witness,
         ],
     )
 }
