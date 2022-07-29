@@ -125,6 +125,7 @@ fn api_compile<'a, T: Field>(code: &'a str, program_path: &'a PathBuf, arena: &'
     log::debug!("Compile");
     
     let program = code.to_string();
+    // FIXME: compile error cause api to panic
     match compile::<T, _>(program.clone(), program_path.clone(), Some(&resolver), config, &arena) {
         Ok(artifacts) => Ok(artifacts.into_inner()),
         Err(e) => Err(format!(
