@@ -6,8 +6,8 @@ use rocket::serde::{json::Json, Serialize};
 
 #[derive(Debug)]
 pub enum ApiError {
-    ProofAlreadyExists(String),
-    ProofNotFound(String),
+    ResourceAlreadyExists(String),
+    ResourceNotFound(String),
     CompilationError(String),
     InternalError(String),
 }
@@ -31,8 +31,8 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for ApiError {
 
         match self {
             ApiError::CompilationError(_) => res.set_status(Status::BadRequest),
-            ApiError::ProofNotFound(_) => res.set_status(Status::NotFound),
-            ApiError::ProofAlreadyExists(_) => res.set_status(Status::Conflict),
+            ApiError::ResourceNotFound(_) => res.set_status(Status::NotFound),
+            ApiError::ResourceAlreadyExists(_) => res.set_status(Status::Conflict),
             _ => res.set_status(Status::InternalServerError),
         };
         Ok(res)

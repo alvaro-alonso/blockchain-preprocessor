@@ -35,7 +35,7 @@ pub fn post_compile_zokrates(
     let hash = format!("{:X}", Sha256::digest(&program));
     let path = Path::new(relative!("out")).join(&hash);
     if path.is_dir() {
-        return Err(ApiError::ProofAlreadyExists(String::from("proof already exists")))
+        return Err(ApiError::ResourceAlreadyExists(String::from("proof already exists")))
     } 
 
     // create all file paths
