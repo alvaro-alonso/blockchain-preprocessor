@@ -29,6 +29,7 @@ fn rocket() -> _ {
             compile::post_compile_zokrates, 
             generate_proof::post_generate_proof,
             compute_witness::post_witness,
+            proving_key::post_proving_key,
         ],
     )
 }
