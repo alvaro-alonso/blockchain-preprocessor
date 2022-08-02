@@ -1,5 +1,6 @@
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::fs::{relative};
+use rocket::http::Status;
 use serde_json::to_writer_pretty;
 use std::fs::{File, create_dir, write, remove_dir_all};
 use std::io::BufWriter;
@@ -10,7 +11,7 @@ use zokrates_core::compile::{compile, CompileConfig, CompileError};
 use zokrates_core::typed_absy::abi::Abi;
 use zokrates_field::{Bn128Field, Field};
 use zokrates_fs_resolver::FileSystemResolver;
-use prover_node::utils::errors::{ApiResult, ApiError};
+use prover_node::utils::responses::{ApiResult, ApiResponse, ApiError};
 
 
 #[derive(Deserialize)]
@@ -81,10 +82,13 @@ pub fn post_compile_zokrates(
             log::info!("Compiled code written to '{}'", bin_output_path.display());
             log::info!("abi file written to '{}'", abi_spec_path.display());
             log::info!("Number of constraints: {}", constrain_count);
-            Ok(Json(CompileResponseBody {
-                proof_id: hash,
-                abi,
-            }))
+            Ok(ApiResponse {
+                response: CompileResponseBody {
+                    proof_id: hash,
+                    abi,
+                },
+                status: Status::Created,
+            })
         },
         Err(e) => {
             // something wrong happened, clean up

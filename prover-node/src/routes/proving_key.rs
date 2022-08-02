@@ -1,14 +1,17 @@
-use rocket::serde::{json::Json, Serialize};
+use rocket::serde::Serialize;
 use rocket::fs::{relative};
+use rocket::http::Status;
 use rocket::Data;
 use rocket::data::ToByteUnit;
 use std::path::{Path};
-use prover_node::utils::errors::{ApiResult, ApiError};
+use prover_node::utils::responses::{ApiResult, ApiResponse, ApiError};
 
 
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde")]
-pub struct ProvingKeyResponseBody {}
+pub struct ProvingKeyResponseBody {
+    message: String,
+}
 
 #[post("/proving-key/<hash>", data = "<upload>")]
 pub async fn post_proving_key(hash: &str, upload: Data<'_>) -> ApiResult<ProvingKeyResponseBody> {
@@ -22,5 +25,10 @@ pub async fn post_proving_key(hash: &str, upload: Data<'_>) -> ApiResult<Proving
     upload.open(200.megabytes()).into_file(permanent_location).await
         .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
-    Ok(Json(ProvingKeyResponseBody {}))
+    Ok(ApiResponse {
+        response: ProvingKeyResponseBody {
+            message: format!("proving key recorded for proof {}", hash)
+        },
+        status: Status::Created,
+    })
 }
