@@ -3,16 +3,13 @@ use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::fs::relative;
 use rocket::http::Status;
 use std::fs::File;
-use std::path::{Path,PathBuf};
-use zokrates_core::ir;
+use std::path::{Path};
 use zokrates_core::ir::ProgEnum;
-use zokrates_field::Field;
-use serde_json::{from_reader, to_string};
+use serde_json::{from_reader};
 use std::io::{BufReader};
-use zokrates_abi::Encode;
 use zokrates_core::typed_absy::abi::Abi;
-use zokrates_abi::Inputs;
 use prover_node::utils::responses::{ApiResult, ApiResponse, ApiError};
+use prover_node::ops::witness::compute_witness;
 
 
 #[derive(Deserialize)]
@@ -75,42 +72,7 @@ pub fn post_witness(hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<
     }
 }
 
-fn compute_witness<T: Field, I: Iterator<Item = ir::Statement<T>>>(
-    ir_prog: ir::ProgIterator<T, I>,
-    arguments: serde_json::Value,
-    abi: Abi,
-) -> Result<(zokrates_core::ir::Witness<T>, serde_json::Value), String> {
-    log::info!("Computing witness...");
-    let signature = abi.signature();
 
-    // get arguments
-    let input =  match to_string(&arguments) {
-        Ok(args) => {
-            use zokrates_abi::parse_strict;
-
-            parse_strict(&args, signature.inputs)
-                .map(Inputs::Abi)
-                .map_err(|why| why.to_string())
-        }
-        Err(_) => Err(String::from("???")),
-    }
-    .map_err(|e| format!("Could not parse argument: {}", e))?;
-
-    let interpreter = ir::Interpreter::default();
-
-    let witness = interpreter
-        .execute(ir_prog, &input.encode())
-        .map_err(|e| format!("Execution failed: {}", e))?;
-
-    use zokrates_abi::Decode;
-
-    let results_json_value: serde_json::Value =
-        zokrates_abi::Values::decode(witness.return_values(), signature.outputs).into_serde_json();
-
-    log::debug!("\nWitness: \n{}\n", results_json_value);
-    Ok((witness, results_json_value))
-
-}
 
 
 // FIXME: add unittest for route
