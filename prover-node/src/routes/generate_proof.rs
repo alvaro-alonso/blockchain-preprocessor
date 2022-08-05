@@ -9,8 +9,7 @@ use zokrates_core::ir;
 use zokrates_core::ir::ProgEnum;
 use zokrates_core::proof_system::ark::Ark;
 use zokrates_core::proof_system::GM17;
-use zokrates_core::proof_system::*;
-use zokrates_field::Field;
+use prover_node::ops::proof::generate_proof;
 use prover_node::utils::responses::{ApiResult, ApiResponse, ApiError};
 
 
@@ -65,8 +64,6 @@ pub fn post_generate_proof(hash: &str, req_body: Json<GenerateProofRequestBody>)
         .map_err(|why| ApiError::InternalError(format!("Could not load witness: {:?}", why)))?;
     log::debug!("read witness successfully");
 
-    
-
     match prog {
         ProgEnum::Bn128Program(p) => {
             let proof =
@@ -85,20 +82,6 @@ pub fn post_generate_proof(hash: &str, req_body: Json<GenerateProofRequestBody>)
     }
 }
 
-fn generate_proof<
-    T: Field,
-    I: Iterator<Item = ir::Statement<T>>,
-    S: Scheme<T>,
-    B: Backend<T, S>,
->(
-    program: ir::ProgIterator<T, I>,
-    witness: zokrates_core::ir::Witness<T>,
-    pk: std::vec::Vec<u8>,
-) -> Result<TaggedProof<T, S>, String> {
-    log::info!("Generating proof...");
-    let proof = B::generate_proof(program, witness, pk);
-    Ok(TaggedProof::<T, S>::new(proof.proof, proof.inputs))
-}
 
 // FIXME: add unittest for route
 // #[cfg(test)] use rocket::local::blocking::Client;
