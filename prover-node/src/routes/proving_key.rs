@@ -13,7 +13,7 @@ pub struct ProvingKeyResponseBody {
     message: String,
 }
 
-#[post("/proving-key/<hash>", data = "<upload>")]
+#[post("/<hash>/proving-key", data = "<upload>")]
 pub async fn post_proving_key(hash: &str, upload: Data<'_>) -> ApiResult<ProvingKeyResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
     let path = Path::new(relative!("out")).join(&hash);
