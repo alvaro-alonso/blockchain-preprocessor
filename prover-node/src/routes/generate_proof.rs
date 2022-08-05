@@ -1,6 +1,7 @@
 use rocket::post;
-use rocket::response::status::NotFound;
 use rocket::serde::{json::Json, Deserialize, Serialize};
+use rocket::http::Status;
+use rocket::fs::relative;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
@@ -10,11 +11,13 @@ use zokrates_core::proof_system::ark::Ark;
 use zokrates_core::proof_system::GM17;
 use zokrates_core::proof_system::*;
 use zokrates_field::Field;
+use prover_node::utils::responses::{ApiResult, ApiResponse, ApiError};
+
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct GenerateProofRequestBody {
-    // proving_key: String,
+    witness: String,
 }
 
 #[derive(Serialize)]
@@ -25,28 +28,58 @@ pub struct GenerateProofResponseBody {
 }
 
 // TODO: add generate proof from request arguments
-#[post("/generate-proof", format = "json")] //, data = "<task>"
-pub fn post_generate_proof(
-    // task: Json<GenerateProofRequestBody>,
-) -> Result<Json<GenerateProofResponseBody>, NotFound<String>> {
+#[post("/<hash>/generate-proof", format = "json", data = "<req_body>")] 
+pub fn post_generate_proof(hash: &str, req_body: Json<GenerateProofRequestBody>) -> ApiResult<GenerateProofResponseBody> {
     // parse input program
-    let program_path = Path::new("proving/proof_of_ownership");
-    let program_file = File::open(&program_path).map_err(|e| NotFound(e.to_string()))?;
-    let mut reader = BufReader::new(program_file);
-    let prog = ProgEnum::deserialize(&mut reader).map_err(|e| NotFound(e.to_string()))?;
-    log::debug!("deserialization successfull");
+    let program_dir = Path::new(relative!("out")).join(&hash);
+    if !program_dir.is_dir() {
+        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", hash)))
+    }
 
-    // #[cfg(feature = "ark")]
+    // read binary file
+    let mut path = program_dir.join("out");
+    if !path.exists() {
+        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", hash)))
+    }
+    let program_file = File::open(&path).map_err(|e| ApiError::InternalError(e.to_string()))?;
+    let mut reader = BufReader::new(program_file);
+    let prog = ProgEnum::deserialize(&mut reader).map_err(|e| ApiError::InternalError(e.to_string()))?;
+    log::debug!("binary deserialization successfull");
+
+    // read proving key
+    path = program_dir.join("proving.key");
+    if !path.exists() {
+        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", hash)))
+    }
+    let pk_file = File::open(&path)
+        .map_err(|why| ApiError::InternalError(format!("Could not open {}: {}", path.display(), why)))?;
+    let mut pk: Vec<u8> = Vec::new();
+    let mut pk_reader = BufReader::new(pk_file);
+    pk_reader
+        .read_to_end(&mut pk)
+        .map_err(|why| ApiError::InternalError(format!("Could not read {}: {}", path.display(), why)))?;
+    log::debug!("read proving key successfully");
+
+    // read witness for request body
+    let witness = ir::Witness::read(req_body.witness.as_bytes())
+        .map_err(|why| ApiError::InternalError(format!("Could not load witness: {:?}", why)))?;
+    log::debug!("read witness successfully");
+
+    
+
     match prog {
         ProgEnum::Bn128Program(p) => {
             let proof =
-                generate_proof::<_, _, GM17, Ark>(p).map_err(|e| NotFound(e.to_string()))?;
+                generate_proof::<_, _, GM17, Ark>(p, witness, pk).map_err(|e| ApiError::CompilationError(e.to_string()))?;
 
             let proof_str = serde_json::to_string_pretty(&proof).unwrap();
             log::debug!("Proof:\n{}", proof_str);
             let proof = serde_json::from_str(&proof_str).unwrap();
 
-            Ok(Json(GenerateProofResponseBody { payload: proof }))
+            Ok(ApiResponse {
+                response: GenerateProofResponseBody { payload: proof },
+                status: Status::Accepted,
+            })
         }
         _ => unreachable!(),
     }
@@ -59,29 +92,10 @@ fn generate_proof<
     B: Backend<T, S>,
 >(
     program: ir::ProgIterator<T, I>,
+    witness: zokrates_core::ir::Witness<T>,
+    pk: std::vec::Vec<u8>,
 ) -> Result<TaggedProof<T, S>, String> {
     log::info!("Generating proof...");
-
-    // read witness
-    let witness_path = Path::new("proving/witness");
-    let witness_file = File::open(&witness_path)
-        .map_err(|why| format!("Could not open {}: {}", witness_path.display(), why))?;
-    let witness = ir::Witness::read(witness_file)
-        .map_err(|why| format!("Could not load witness: {:?}", why))?;
-    log::debug!("read witness successfully");
-
-    // read proving key
-    let pk_path = Path::new("proving/proving.key");
-    let pk_file = File::open(&pk_path)
-        .map_err(|why| format!("Could not open {}: {}", pk_path.display(), why))?;
-
-    let mut pk: Vec<u8> = Vec::new();
-    let mut pk_reader = BufReader::new(pk_file);
-    pk_reader
-        .read_to_end(&mut pk)
-        .map_err(|why| format!("Could not read {}: {}", pk_path.display(), why))?;
-    log::debug!("read proving key successfully");
-
     let proof = B::generate_proof(program, witness, pk);
     Ok(TaggedProof::<T, S>::new(proof.proof, proof.inputs))
 }
