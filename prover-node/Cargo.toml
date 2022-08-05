@@ -1,5 +1,5 @@
 [package]
-name = "prover-node"
+name = "prover_node"
 version = "0.1.0"
 edition = "2021"
 
@@ -19,3 +19,4 @@ zokrates_fs_resolver = { version = "0.5.2", path = "./zokrates/zokrates_fs_resol
 zokrates_stdlib = { version = "0.2.8", path = "./zokrates/zokrates_stdlib", default-features = false }
 log = "0.4"
 typed-arena = "1.4.1"
+sha2 = "0.10"
