@@ -28,18 +28,18 @@ pub struct GenerateProofResponseBody {
 }
 
 #[openapi]
-#[post("/<hash>/generate-proof", format = "json", data = "<req_body>")] 
-pub fn post_generate_proof(hash: &str, req_body: Json<GenerateProofRequestBody>) -> ApiResult<GenerateProofResponseBody> {
+#[post("/<program_hash>/generate-proof", format = "json", data = "<req_body>")] 
+pub fn post_generate_proof(program_hash: &str, req_body: Json<GenerateProofRequestBody>) -> ApiResult<GenerateProofResponseBody> {
     // parse input program
-    let program_dir = Path::new(relative!("out")).join(&hash);
+    let program_dir = Path::new(relative!("out")).join(&program_hash);
     if !program_dir.is_dir() {
-        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", hash)))
+        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", program_hash)))
     }
 
     // read binary file
     let mut path = program_dir.join("out");
     if !path.exists() {
-        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", hash)))
+        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", program_hash)))
     }
     let program_file = File::open(&path).map_err(|e| ApiError::InternalError(e.to_string()))?;
     let mut reader = BufReader::new(program_file);
@@ -49,7 +49,7 @@ pub fn post_generate_proof(hash: &str, req_body: Json<GenerateProofRequestBody>)
     // read proving key
     path = program_dir.join("proving.key");
     if !path.exists() {
-        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", hash)))
+        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", program_hash)))
     }
     let pk_file = File::open(&path)
         .map_err(|why| ApiError::InternalError(format!("Could not open {}: {}", path.display(), why)))?;

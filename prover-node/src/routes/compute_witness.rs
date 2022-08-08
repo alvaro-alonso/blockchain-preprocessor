@@ -27,19 +27,19 @@ pub struct WitnessResponseBody {
 }
 
 #[openapi]
-#[post("/<hash>/compute-witness", data = "<witness>", format = "json")] //
-pub fn post_witness(hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<WitnessResponseBody> {
+#[post("/<program_hash>/compute-witness", data = "<witness>", format = "json")] //
+pub fn post_witness(program_hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<WitnessResponseBody> {
     // parse input program
-    let program_dir = Path::new(relative!("out")).join(&hash);
+    let program_dir = Path::new(relative!("out")).join(&program_hash);
     if !program_dir.is_dir() {
-        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", hash)))
+        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", program_hash)))
     }
 
     //TODO: make file reading async
     // read binary file
     let mut path = program_dir.join("out");
     if !path.exists() {
-        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", hash)))
+        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", program_hash)))
     }
     let mut file = File::open(&path)
         .map_err(|why| ApiError::InternalError(format!("Could not open {}: {}", program_dir.display(), why)))?;
@@ -49,7 +49,7 @@ pub fn post_witness(hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<
     // read abi file
     path = program_dir.join("abi.json");
     if !path.exists() {
-        return Err(ApiError::ResourceNotFound(format!("ABI file for proof {} does not exists. Commile the program first", hash)))
+        return Err(ApiError::ResourceNotFound(format!("ABI file for proof {} does not exists. Commile the program first", program_hash)))
     }
     file = File::open(&path)
         .map_err(|why| ApiError::InternalError(format!("Could not open {}: {}", path.display(), why)))?;
