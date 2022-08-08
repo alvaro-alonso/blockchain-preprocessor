@@ -1,43 +1,46 @@
 use rocket::post;
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::fs::relative;
-use rocket::http::Status;
-use std::fs::File;
+use rocket_okapi::openapi;
+use rocket_okapi::okapi::schemars::JsonSchema;
+use std::fs::{File, read_to_string};
 use std::path::{Path};
 use zokrates_core::ir::ProgEnum;
 use serde_json::{from_reader};
 use std::io::{BufReader};
 use zokrates_core::typed_absy::abi::Abi;
-use prover_node::utils::responses::{ApiResult, ApiResponse, ApiError};
+use prover_node::utils::responses::{ApiResult, ApiError};
 use prover_node::ops::witness::compute_witness;
 
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
+#[schemars(example="request_example")]
 pub struct WitnessRequestBody {
     payload: serde_json::Value,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
 pub struct WitnessResponseBody {
     output: serde_json::Value,
     witness: String,
 }
 
-#[post("/<hash>/compute-witness", data = "<witness>", format = "json")] //
-pub fn post_witness(hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<WitnessResponseBody> {
+#[openapi]
+#[post("/<program_hash>/compute-witness", data = "<witness>", format = "json")] //
+pub fn post_witness(program_hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<WitnessResponseBody> {
     // parse input program
-    let program_dir = Path::new(relative!("out")).join(&hash);
+    let program_dir = Path::new(relative!("out")).join(&program_hash);
     if !program_dir.is_dir() {
-        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", hash)))
+        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", program_hash)))
     }
 
     //TODO: make file reading async
     // read binary file
     let mut path = program_dir.join("out");
     if !path.exists() {
-        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", hash)))
+        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", program_hash)))
     }
     let mut file = File::open(&path)
         .map_err(|why| ApiError::InternalError(format!("Could not open {}: {}", program_dir.display(), why)))?;
@@ -47,7 +50,7 @@ pub fn post_witness(hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<
     // read abi file
     path = program_dir.join("abi.json");
     if !path.exists() {
-        return Err(ApiError::ResourceNotFound(format!("ABI file for proof {} does not exists. Commile the program first", hash)))
+        return Err(ApiError::ResourceNotFound(format!("ABI file for proof {} does not exists. Commile the program first", program_hash)))
     }
     file = File::open(&path)
         .map_err(|why| ApiError::InternalError(format!("Could not open {}: {}", path.display(), why)))?;
@@ -57,13 +60,12 @@ pub fn post_witness(hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<
     match prog {
         ProgEnum::Bn128Program(p) => {
             match compute_witness(p, witness.payload.clone(), abi){
-                Ok((witness, output)) => Ok(ApiResponse {
-                    response: WitnessResponseBody {
+                Ok((witness, output)) => Ok(Json(
+                    WitnessResponseBody {
                         witness: witness.to_string(),
                         output,
-                    },
-                    status: Status::Created,
-                }),
+                    }
+                )),
                 Err(err) => Err(ApiError::CompilationError(format!("error computing witness:\n {}", err))),
             }
             
@@ -98,3 +100,15 @@ pub fn post_witness(hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<
 // .map_err(|e| NotFound(e.to_string()))?;
 //     assert_eq!(proof, blablabla);
 // }
+
+
+fn request_example() -> WitnessRequestBody {
+    let file = read_to_string("proving/witness_abi.json")
+        .expect("example witness .json file is missing from repository");
+    let payload = serde_json::from_str(&file)
+        .expect("example witness .json is mal-formated");
+    
+        WitnessRequestBody {
+        payload, 
+    }
+}

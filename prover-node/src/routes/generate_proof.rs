@@ -1,8 +1,9 @@
 use rocket::post;
 use rocket::serde::{json::Json, Deserialize, Serialize};
-use rocket::http::Status;
 use rocket::fs::relative;
-use std::fs::File;
+use rocket_okapi::openapi;
+use rocket_okapi::okapi::schemars::JsonSchema;
+use std::fs::{File, read_to_string};
 use std::io::{BufReader, Read};
 use std::path::Path;
 use zokrates_core::ir;
@@ -10,35 +11,36 @@ use zokrates_core::ir::ProgEnum;
 use zokrates_core::proof_system::ark::Ark;
 use zokrates_core::proof_system::GM17;
 use prover_node::ops::proof::generate_proof;
-use prover_node::utils::responses::{ApiResult, ApiResponse, ApiError};
+use prover_node::utils::responses::{ApiResult, ApiError};
 
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
+#[schemars(example="request_example")]
 pub struct GenerateProofRequestBody {
     witness: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
 pub struct GenerateProofResponseBody {
     // TODO: serialize TaggedProof
     payload: serde_json::Value,
 }
 
-// TODO: add generate proof from request arguments
-#[post("/<hash>/generate-proof", format = "json", data = "<req_body>")] 
-pub fn post_generate_proof(hash: &str, req_body: Json<GenerateProofRequestBody>) -> ApiResult<GenerateProofResponseBody> {
+#[openapi]
+#[post("/<program_hash>/generate-proof", format = "json", data = "<req_body>")] 
+pub fn post_generate_proof(program_hash: &str, req_body: Json<GenerateProofRequestBody>) -> ApiResult<GenerateProofResponseBody> {
     // parse input program
-    let program_dir = Path::new(relative!("out")).join(&hash);
+    let program_dir = Path::new(relative!("out")).join(&program_hash);
     if !program_dir.is_dir() {
-        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", hash)))
+        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", program_hash)))
     }
 
     // read binary file
     let mut path = program_dir.join("out");
     if !path.exists() {
-        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", hash)))
+        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", program_hash)))
     }
     let program_file = File::open(&path).map_err(|e| ApiError::InternalError(e.to_string()))?;
     let mut reader = BufReader::new(program_file);
@@ -48,7 +50,7 @@ pub fn post_generate_proof(hash: &str, req_body: Json<GenerateProofRequestBody>)
     // read proving key
     path = program_dir.join("proving.key");
     if !path.exists() {
-        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", hash)))
+        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", program_hash)))
     }
     let pk_file = File::open(&path)
         .map_err(|why| ApiError::InternalError(format!("Could not open {}: {}", path.display(), why)))?;
@@ -73,10 +75,9 @@ pub fn post_generate_proof(hash: &str, req_body: Json<GenerateProofRequestBody>)
             log::debug!("Proof:\n{}", proof_str);
             let proof = serde_json::from_str(&proof_str).unwrap();
 
-            Ok(ApiResponse {
-                response: GenerateProofResponseBody { payload: proof },
-                status: Status::Accepted,
-            })
+            Ok(Json(
+                GenerateProofResponseBody { payload: proof }
+            ))
         }
         _ => unreachable!(),
     }
@@ -106,3 +107,14 @@ pub fn post_generate_proof(hash: &str, req_body: Json<GenerateProofRequestBody>)
 // .map_err(|e| NotFound(e.to_string()))?;
 //     assert_eq!(proof, blablabla);
 // }
+
+
+// Request example for OpenApi Documentation
+fn request_example() -> GenerateProofRequestBody {
+    let witness = read_to_string("proving/witness")
+        .expect("example witness file is missing from repository");
+    
+        GenerateProofRequestBody {
+        witness, 
+    }
+}

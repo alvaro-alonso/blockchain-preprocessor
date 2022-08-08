@@ -20,3 +20,8 @@ zokrates_stdlib = { version = "0.2.8", path = "./zokrates/zokrates_stdlib", defa
 log = "0.4"
 typed-arena = "1.4.1"
 sha2 = "0.10"
+
+# open-api
+schemars = "0.8"
+okapi = { version = "0.6.0-alpha-1" }
+rocket_okapi = { version = "0.8.0-alpha-1", features = ["swagger"] }
