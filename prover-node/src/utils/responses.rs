@@ -1,6 +1,6 @@
 use rocket::serde::{json::Json, Serialize};
-use rocket::{response, response::{Response, Responder}};
-use rocket::http::{ContentType, Status};
+use rocket::{response, response::Responder};
+use rocket::http::Status;
 use rocket::request::Request;
 use schemars::Map;
 use rocket_okapi::{
@@ -106,7 +106,7 @@ impl OpenApiResponderInner for ApiError {
             RefOr::Object(OpenApiReponse {
                 description: "\
                 [500 Internal Server Error](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500)\n\
-                This response is given when something wend wrong on the server.\
+                This response is given when something went wrong on the server.\
                 ".to_string(),
                 ..Default::default()
             }),

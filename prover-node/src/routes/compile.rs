@@ -3,7 +3,7 @@ use rocket::fs::{relative};
 use rocket_okapi::openapi;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde_json::to_writer_pretty;
-use std::fs::{File, create_dir, write, remove_dir_all};
+use std::fs::{File, create_dir, write, remove_dir_all, read_to_string};
 use std::io::BufWriter;
 use std::path::Path;
 use typed_arena::Arena;
@@ -13,8 +13,9 @@ use prover_node::ops::compile::api_compile;
 use prover_node::utils::responses::{ApiResult, ApiError};
 
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Deserialize, Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
+#[schemars(example="request_example")]
 pub struct CompileRequestBody {
     program: String,
 }
@@ -127,3 +128,13 @@ pub fn post_compile_zokrates(
 // .map_err(|e| NotFound(e.to_string()))?;
 //     assert_eq!(proof, blablabla);
 // }
+
+// Request example for OpenApi Documentation
+fn request_example() -> CompileRequestBody {
+    let program = read_to_string("proving/proof_of_ownership.zok")
+        .expect("example .zok file is missing from repository");
+    
+        CompileRequestBody {
+        program, 
+    }
+}
