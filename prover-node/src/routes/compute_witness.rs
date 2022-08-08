@@ -3,7 +3,7 @@ use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::fs::relative;
 use rocket_okapi::openapi;
 use rocket_okapi::okapi::schemars::JsonSchema;
-use std::fs::File;
+use std::fs::{File, read_to_string};
 use std::path::{Path};
 use zokrates_core::ir::ProgEnum;
 use serde_json::{from_reader};
@@ -13,8 +13,9 @@ use prover_node::utils::responses::{ApiResult, ApiError};
 use prover_node::ops::witness::compute_witness;
 
 
-#[derive(Deserialize, JsonSchema)]
+#[derive(Deserialize, Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
+#[schemars(example="request_example")]
 pub struct WitnessRequestBody {
     payload: serde_json::Value,
 }
@@ -99,3 +100,15 @@ pub fn post_witness(program_hash: &str, witness: Json<WitnessRequestBody>) -> Ap
 // .map_err(|e| NotFound(e.to_string()))?;
 //     assert_eq!(proof, blablabla);
 // }
+
+
+fn request_example() -> WitnessRequestBody {
+    let file = read_to_string("proving/witness_abi.json")
+        .expect("example witness .json file is missing from repository");
+    let payload = serde_json::from_str(&file)
+        .expect("example witness .json is mal-formated");
+    
+        WitnessRequestBody {
+        payload, 
+    }
+}
