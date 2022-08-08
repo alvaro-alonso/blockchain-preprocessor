@@ -1,39 +1,42 @@
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::fs::{relative};
-use rocket::http::Status;
+use rocket_okapi::openapi;
+use rocket_okapi::okapi::schemars::JsonSchema;
 use serde_json::to_writer_pretty;
-use std::fs::{File, create_dir, write, remove_dir_all};
+use std::fs::{File, create_dir, write, remove_dir_all, read_to_string};
 use std::io::BufWriter;
 use std::path::Path;
 use typed_arena::Arena;
 use sha2::{Sha256, Digest};
-use zokrates_core::typed_absy::abi::Abi;
 use zokrates_field::Bn128Field;
 use prover_node::ops::compile::api_compile;
-use prover_node::utils::responses::{ApiResult, ApiResponse, ApiError};
+use prover_node::utils::responses::{ApiResult, ApiError};
 
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
+#[schemars(example="request_example")]
 pub struct CompileRequestBody {
     program: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
-pub struct CompileResponseBody {
-    proof_id: String,
-    abi: Abi,
+pub struct CompileResponseBody{
+    program_hash: String,
+    // Abi type is not supported by JsonSchema
+    abi: serde_json::Value,
 }
 
+#[openapi]
 #[post("/compile", data = "<req_body>", format = "json")]
 pub fn post_compile_zokrates(
     req_body: Json<CompileRequestBody>,
 ) -> ApiResult<CompileResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
     let program = req_body.program.clone();
-    let hash = format!("{:X}", Sha256::digest(&program));
-    let path = Path::new(relative!("out")).join(&hash);
+    let program_hash = format!("{:X}", Sha256::digest(&program));
+    let path = Path::new(relative!("out")).join(&program_hash);
     if path.is_dir() {
         return Err(ApiError::ResourceAlreadyExists(String::from("proof already exists")))
     } 
@@ -81,13 +84,18 @@ pub fn post_compile_zokrates(
             log::info!("Compiled code written to '{}'", bin_output_path.display());
             log::info!("abi file written to '{}'", abi_spec_path.display());
             log::info!("Number of constraints: {}", constrain_count);
-            Ok(ApiResponse {
-                response: CompileResponseBody {
-                    proof_id: hash,
-                    abi,
-                },
-                status: Status::Created,
-            })
+            
+            // convert abi type to json value
+            let abi_str = serde_json::to_string_pretty(&abi).unwrap();
+            log::debug!("Proof:\n{}", abi_str);
+            let abi_json = serde_json::from_str(&abi_str).unwrap();
+
+            Ok(Json(
+                CompileResponseBody {
+                    program_hash,
+                    abi: abi_json,
+                }
+            ))
         },
         Err(e) => {
             // something wrong happened, clean up
@@ -120,3 +128,13 @@ pub fn post_compile_zokrates(
 // .map_err(|e| NotFound(e.to_string()))?;
 //     assert_eq!(proof, blablabla);
 // }
+
+// Request example for OpenApi Documentation
+fn request_example() -> CompileRequestBody {
+    let program = read_to_string("proving/proof_of_ownership.zok")
+        .expect("example .zok file is missing from repository");
+    
+        CompileRequestBody {
+        program, 
+    }
+}

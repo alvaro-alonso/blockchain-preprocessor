@@ -2,17 +2,20 @@
 extern crate rocket;
 
 use rocket::serde::{json::Json, Deserialize, Serialize};
+use rocket_okapi::{openapi, openapi_get_routes, JsonSchema};
+use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
 
 mod routes;
 use routes::*;
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
 struct Task {
     message: String,
 }
 
+#[openapi]
 #[get("/", format = "json")]
 fn index() -> Json<Task> {
     Json(Task {
@@ -20,18 +23,42 @@ fn index() -> Json<Task> {
     })
 }
 
+fn get_docs() -> SwaggerUIConfig {
+
+    SwaggerUIConfig {
+        url: "/openapi.json".to_string(),
+        ..Default::default()
+    }
+}
+
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount(
-        "/",
-        routes![
-            index, 
-            compile::post_compile_zokrates, 
-            generate_proof::post_generate_proof,
-            compute_witness::post_witness,
-            proving_key::post_proving_key,
-        ],
-    )
+    // openapi only on debug mode available
+    match cfg!(debug_assertions) {
+        true => rocket::build()
+            .mount(
+                "/",
+                openapi_get_routes![
+                    index, 
+                    compile::post_compile_zokrates, 
+                    generate_proof::post_generate_proof,
+                    compute_witness::post_witness,
+                    proving_key::post_proving_key,
+                ],
+            )
+            .mount("/docs", make_swagger_ui(&get_docs())),
+        false => rocket::build()
+            .mount(
+                "/",
+                routes![
+                    index, 
+                    compile::post_compile_zokrates, 
+                    generate_proof::post_generate_proof,
+                    compute_witness::post_witness,
+                    proving_key::post_proving_key,
+                ],
+            )
+    }       
 }
 
 #[cfg(test)]
