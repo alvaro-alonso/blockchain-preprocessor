@@ -1,18 +1,20 @@
-use rocket::serde::Serialize;
+use rocket::serde::{json::Json, Serialize};
 use rocket::fs::{relative};
-use rocket::http::Status;
 use rocket::Data;
 use rocket::data::ToByteUnit;
+use rocket_okapi::openapi;
+use rocket_okapi::okapi::schemars::JsonSchema;
 use std::path::{Path};
-use prover_node::utils::responses::{ApiResult, ApiResponse, ApiError};
+use prover_node::utils::responses::{ApiResult, ApiError};
 
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
 pub struct ProvingKeyResponseBody {
     message: String,
 }
 
+#[openapi]
 #[post("/<hash>/proving-key", data = "<upload>")]
 pub async fn post_proving_key(hash: &str, upload: Data<'_>) -> ApiResult<ProvingKeyResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
@@ -25,10 +27,9 @@ pub async fn post_proving_key(hash: &str, upload: Data<'_>) -> ApiResult<Proving
     upload.open(200.megabytes()).into_file(permanent_location).await
         .map_err(|e| ApiError::InternalError(e.to_string()))?;
 
-    Ok(ApiResponse {
-        response: ProvingKeyResponseBody {
+    Ok(Json(
+        ProvingKeyResponseBody {
             message: format!("proving key recorded for proof {}", hash)
-        },
-        status: Status::Created,
-    })
+        }
+    ))
 }

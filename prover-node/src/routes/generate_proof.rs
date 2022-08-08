@@ -1,7 +1,8 @@
 use rocket::post;
 use rocket::serde::{json::Json, Deserialize, Serialize};
-use rocket::http::Status;
 use rocket::fs::relative;
+use rocket_okapi::openapi;
+use rocket_okapi::okapi::schemars::JsonSchema;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
@@ -10,23 +11,23 @@ use zokrates_core::ir::ProgEnum;
 use zokrates_core::proof_system::ark::Ark;
 use zokrates_core::proof_system::GM17;
 use prover_node::ops::proof::generate_proof;
-use prover_node::utils::responses::{ApiResult, ApiResponse, ApiError};
+use prover_node::utils::responses::{ApiResult, ApiError};
 
 
-#[derive(Deserialize)]
+#[derive(Deserialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
 pub struct GenerateProofRequestBody {
     witness: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
 pub struct GenerateProofResponseBody {
     // TODO: serialize TaggedProof
     payload: serde_json::Value,
 }
 
-// TODO: add generate proof from request arguments
+#[openapi]
 #[post("/<hash>/generate-proof", format = "json", data = "<req_body>")] 
 pub fn post_generate_proof(hash: &str, req_body: Json<GenerateProofRequestBody>) -> ApiResult<GenerateProofResponseBody> {
     // parse input program
@@ -73,10 +74,9 @@ pub fn post_generate_proof(hash: &str, req_body: Json<GenerateProofRequestBody>)
             log::debug!("Proof:\n{}", proof_str);
             let proof = serde_json::from_str(&proof_str).unwrap();
 
-            Ok(ApiResponse {
-                response: GenerateProofResponseBody { payload: proof },
-                status: Status::Accepted,
-            })
+            Ok(Json(
+                GenerateProofResponseBody { payload: proof }
+            ))
         }
         _ => unreachable!(),
     }
