@@ -33,18 +33,32 @@ fn get_docs() -> SwaggerUIConfig {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build()
-        .mount(
-            "/",
-            openapi_get_routes![
-                index, 
-                compile::post_compile_zokrates, 
-                generate_proof::post_generate_proof,
-                compute_witness::post_witness,
-                proving_key::post_proving_key,
-            ],
-        )
-        .mount("/docs", make_swagger_ui(&get_docs()))
+    // openapi only on debug mode available
+    match cfg!(debug_assertions) {
+        true => rocket::build()
+            .mount(
+                "/",
+                openapi_get_routes![
+                    index, 
+                    compile::post_compile_zokrates, 
+                    generate_proof::post_generate_proof,
+                    compute_witness::post_witness,
+                    proving_key::post_proving_key,
+                ],
+            )
+            .mount("/docs", make_swagger_ui(&get_docs())),
+        false => rocket::build()
+            .mount(
+                "/",
+                routes![
+                    index, 
+                    compile::post_compile_zokrates, 
+                    generate_proof::post_generate_proof,
+                    compute_witness::post_witness,
+                    proving_key::post_proving_key,
+                ],
+            )
+    }       
 }
 
 #[cfg(test)]
