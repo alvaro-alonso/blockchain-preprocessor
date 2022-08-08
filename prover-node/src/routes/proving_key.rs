@@ -15,12 +15,12 @@ pub struct ProvingKeyResponseBody {
 }
 
 #[openapi]
-#[post("/<hash>/proving-key", data = "<upload>")]
-pub async fn post_proving_key(hash: &str, upload: Data<'_>) -> ApiResult<ProvingKeyResponseBody> {
+#[post("/<program_hash>/proving-key", data = "<upload>")]
+pub async fn post_proving_key(program_hash: &str, upload: Data<'_>) -> ApiResult<ProvingKeyResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
-    let path = Path::new(relative!("out")).join(&hash);
+    let path = Path::new(relative!("out")).join(&program_hash);
     if !path.is_dir() {
-        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", hash)))
+        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", program_hash)))
     }
 
     let permanent_location = path.join("proving.key");
@@ -29,7 +29,7 @@ pub async fn post_proving_key(hash: &str, upload: Data<'_>) -> ApiResult<Proving
 
     Ok(Json(
         ProvingKeyResponseBody {
-            message: format!("proving key recorded for proof {}", hash)
+            message: format!("proving key recorded for proof {}", program_hash)
         }
     ))
 }

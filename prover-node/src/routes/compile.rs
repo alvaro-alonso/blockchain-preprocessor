@@ -23,7 +23,7 @@ pub struct CompileRequestBody {
 #[derive(Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
 pub struct CompileResponseBody{
-    proof_id: String,
+    program_hash: String,
     // Abi type is not supported by JsonSchema
     abi: serde_json::Value,
 }
@@ -35,8 +35,8 @@ pub fn post_compile_zokrates(
 ) -> ApiResult<CompileResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
     let program = req_body.program.clone();
-    let hash = format!("{:X}", Sha256::digest(&program));
-    let path = Path::new(relative!("out")).join(&hash);
+    let program_hash = format!("{:X}", Sha256::digest(&program));
+    let path = Path::new(relative!("out")).join(&program_hash);
     if path.is_dir() {
         return Err(ApiError::ResourceAlreadyExists(String::from("proof already exists")))
     } 
@@ -92,7 +92,7 @@ pub fn post_compile_zokrates(
 
             Ok(Json(
                 CompileResponseBody {
-                    proof_id: hash,
+                    program_hash,
                     abi: abi_json,
                 }
             ))
