@@ -25,7 +25,7 @@ pub struct GenerateProofRequestBody {
 #[serde(crate = "rocket::serde")]
 pub struct GenerateProofResponseBody {
     // TODO: serialize TaggedProof
-    payload: serde_json::Value,
+    pub payload: serde_json::Value,
 }
 
 #[openapi]
