@@ -17,7 +17,7 @@ use prover_node::ops::witness::compute_witness;
 #[serde(crate = "rocket::serde")]
 #[schemars(example="request_example")]
 pub struct WitnessRequestBody {
-    payload: serde_json::Value,
+    pub payload: serde_json::Value,
 }
 
 #[derive(Serialize, JsonSchema)]

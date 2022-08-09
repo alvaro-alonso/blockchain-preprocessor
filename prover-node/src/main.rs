@@ -44,6 +44,7 @@ fn rocket() -> _ {
                     generate_proof::post_generate_proof,
                     compute_witness::post_witness,
                     proving_key::post_proving_key,
+                    compute_generate_proof::post_compute_generate_proof,
                 ],
             )
             .mount("/docs", make_swagger_ui(&get_docs())),
@@ -56,6 +57,7 @@ fn rocket() -> _ {
                     generate_proof::post_generate_proof,
                     compute_witness::post_witness,
                     proving_key::post_proving_key,
+                    compute_generate_proof::post_compute_generate_proof,
                 ],
             )
     }       
