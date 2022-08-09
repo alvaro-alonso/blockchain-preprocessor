@@ -42,3 +42,60 @@ pub fn compute_witness<T: Field, I: Iterator<Item = ir::Statement<T>>>(
     Ok((witness, results_json_value))
 
 }
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use zokrates_core::ir::ProgEnum;
+    use std::fs::File;
+    use std::io::BufReader;
+
+    const ABI: &str = r#"{
+            "inputs": [
+                {
+                    "name": "N",
+                    "public": true,
+                    "type": "field"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bool"
+                }
+            ]
+        }"#;
+
+    #[test]
+    fn test_correct_witness_computation() {
+        let file = File::open("tests/test").unwrap();
+        let mut reader = BufReader::new(file);
+        let prog = ProgEnum::deserialize(&mut reader).unwrap();
+        let witness_args = serde_json::to_value(["1"]).unwrap();
+        let abi = serde_json::from_str(ABI).unwrap();
+
+        let witness = match prog {
+            ProgEnum::Bn128Program(p) => compute_witness(p, witness_args, abi),
+            _ => unreachable!(),
+        };
+        assert!(witness.is_ok());
+
+        let (_, output) = witness.unwrap();
+        assert_eq!(output[0], true);
+    }
+
+    #[test]
+    fn test_wrong_witness_computation() {
+        let file = File::open("tests/test").unwrap();
+        let mut reader = BufReader::new(file);
+        let prog = ProgEnum::deserialize(&mut reader).unwrap();
+        let witness_args = serde_json::to_value(["2"]).unwrap();
+        let abi = serde_json::from_str(ABI).unwrap();
+
+        let witness = match prog {
+            ProgEnum::Bn128Program(p) => compute_witness(p, witness_args, abi),
+            _ => unreachable!(),
+        };
+        assert!(witness.is_err());
+    }
+}

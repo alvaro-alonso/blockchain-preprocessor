@@ -9,7 +9,7 @@ use std::path::Path;
 use typed_arena::Arena;
 use sha2::{Sha256, Digest};
 use zokrates_field::Bn128Field;
-use prover_node::ops::compile::api_compile;
+use prover_node::ops::compilation::api_compile;
 use prover_node::utils::responses::{ApiResult, ApiError};
 
 
