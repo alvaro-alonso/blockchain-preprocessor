@@ -48,8 +48,9 @@ pub fn post_compile_zokrates(
     let arena = Arena::new();
 
     // compile .zok code
-    let (program_flattened, abi) = api_compile::<Bn128Field>(&program, &program_path, &arena)
+    let compilation_artifacts = api_compile::<Bn128Field>(&program, &program_path, &arena)
         .map_err(|e| ApiError::CompilationError(e))?;
+    let (compiled_program, abi) = compilation_artifacts.into_inner();
         
     // if compilation successful write .zok, binary and abi file under the hash folder
     let write_outputs = || -> Result<usize, String> {
@@ -61,7 +62,7 @@ pub fn post_compile_zokrates(
         let bin_output_file = File::create(&bin_output_path)
             .map_err(|why| format!("Could not create {}: {}", bin_output_path.display(), why))?;
         let mut writer = BufWriter::new(bin_output_file);
-        let constrain_count = program_flattened.serialize(&mut writer)
+        let constrain_count = compiled_program.serialize(&mut writer)
             .map_err(|e| e.to_string())?;
 
         // serialize ABI spec and write to JSON file
