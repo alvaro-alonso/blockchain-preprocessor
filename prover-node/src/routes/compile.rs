@@ -1,9 +1,9 @@
 use rocket::serde::{json::Json, Deserialize, Serialize};
-use rocket::fs::{relative};
+use rocket::fs::relative;
 use rocket_okapi::openapi;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde_json::to_writer_pretty;
-use std::fs::{File, create_dir, write, remove_dir_all, read_to_string};
+use std::fs::{File, create_dir, write, remove_dir_all};
 use std::io::BufWriter;
 use std::path::Path;
 use typed_arena::Arena;
@@ -108,11 +108,8 @@ pub fn post_compile_zokrates(
 
 #[cfg(debug_assertions)]
 fn request_example() -> CompileRequestBody {
-    let program = read_to_string("proving/proof_of_ownership.zok")
-        .expect("example .zok file is missing from repository");
-    
-        CompileRequestBody {
-        program, 
+    CompileRequestBody {
+        program: "def main(field N) -> (bool):\n    return (N == 1)".to_string(),
     }
 }
 

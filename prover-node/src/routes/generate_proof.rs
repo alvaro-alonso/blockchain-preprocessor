@@ -3,7 +3,7 @@ use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::fs::relative;
 use rocket_okapi::openapi;
 use rocket_okapi::okapi::schemars::JsonSchema;
-use std::fs::{File, read_to_string};
+use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
 use zokrates_core::ir;
@@ -112,10 +112,13 @@ pub fn post_generate_proof(program_hash: &str, req_body: Json<GenerateProofReque
 // Request example for OpenApi Documentation
 #[cfg(debug_assertions)]
 fn request_example() -> GenerateProofRequestBody {
-    let witness = read_to_string("proving/witness")
-        .expect("example witness file is missing from repository");
-    
-        GenerateProofRequestBody {
+    let witness = r#"~out_0 1
+~one 1
+_0 1
+_2 0
+_3 1"#.to_string();
+
+    GenerateProofRequestBody {
         witness, 
     }
 }
