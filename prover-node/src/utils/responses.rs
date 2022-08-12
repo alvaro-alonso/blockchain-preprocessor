@@ -14,7 +14,7 @@ use rocket_okapi::{
 pub type ApiResult<T> = Result<Json<T>, ApiError>;
 
 
-#[derive(Debug, JsonSchema)]
+#[derive(Debug, PartialEq, JsonSchema)]
 pub enum ApiError {
     ResourceAlreadyExists(String),
     ResourceNotFound(String),

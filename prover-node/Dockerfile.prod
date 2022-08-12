@@ -7,8 +7,6 @@ COPY ./Cargo.toml ./Cargo.toml
 COPY ./Rocket.toml ./Rocket.toml
 COPY ./zokrates ./zokrates
 COPY ./src ./src
-# TODO: erase trial proof
-COPY ./proving ./proving
 
 RUN apk add --no-cache musl-dev
 

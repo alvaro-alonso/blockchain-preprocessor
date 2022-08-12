@@ -9,18 +9,18 @@ use std::path::Path;
 use typed_arena::Arena;
 use sha2::{Sha256, Digest};
 use zokrates_field::Bn128Field;
-use prover_node::ops::compile::api_compile;
+use prover_node::ops::compilation::api_compile;
 use prover_node::utils::responses::{ApiResult, ApiError};
 
 
-#[derive(Deserialize, Serialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
 #[schemars(example="request_example")]
 pub struct CompileRequestBody {
     program: String,
 }
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
 pub struct CompileResponseBody{
     program_hash: String,
@@ -48,8 +48,9 @@ pub fn post_compile_zokrates(
     let arena = Arena::new();
 
     // compile .zok code
-    let (program_flattened, abi) = api_compile::<Bn128Field>(&program, &program_path, &arena)
+    let compilation_artifacts = api_compile::<Bn128Field>(&program, &program_path, &arena)
         .map_err(|e| ApiError::CompilationError(e))?;
+    let (compiled_program, abi) = compilation_artifacts.into_inner();
         
     // if compilation successful write .zok, binary and abi file under the hash folder
     let write_outputs = || -> Result<usize, String> {
@@ -61,7 +62,7 @@ pub fn post_compile_zokrates(
         let bin_output_file = File::create(&bin_output_path)
             .map_err(|why| format!("Could not create {}: {}", bin_output_path.display(), why))?;
         let mut writer = BufWriter::new(bin_output_file);
-        let constrain_count = program_flattened.serialize(&mut writer)
+        let constrain_count = compiled_program.serialize(&mut writer)
             .map_err(|e| e.to_string())?;
 
         // serialize ABI spec and write to JSON file
@@ -105,36 +106,60 @@ pub fn post_compile_zokrates(
     }
 }
 
-// FIXME: add unittest for route
-// #[cfg(test)] use rocket::local::blocking::Client;
-// #[cfg(test)] use rocket::http::{Status, ContentType};
-
-// mock generate_proof function
-//  #[test]
-// fn test_post_generate_proof() {
-//     let client = Client::tracked(super::rocket()).unwrap();
-//     let res = client.post("/generate-proof")
-//         .header(ContentType::JSON)
-//         .body(r##"{
-//             "proving_key": "ridicolous text"
-//         }"##)
-//         .dispatch();
-//     assert_eq!(res.status(), Status::Ok);
-// }
-
-//  #[test]
-// fn test_generate_proof() {
-//     let proof = let proof = generate_proof::<_, _, GM17, Ark>(p)
-// .map_err(|e| NotFound(e.to_string()))?;
-//     assert_eq!(proof, blablabla);
-// }
-
-// Request example for OpenApi Documentation
 fn request_example() -> CompileRequestBody {
     let program = read_to_string("proving/proof_of_ownership.zok")
         .expect("example .zok file is missing from repository");
     
         CompileRequestBody {
         program, 
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use rocket::local::blocking::Client;
+    use rocket::http::{ContentType, Status};
+
+    // FIXME: currently test can only be run once when program is not run
+    #[test]
+    fn successful_compilation() {
+        // TODO: import unique rocket_builder for tests and main
+        let server = rocket::build().mount("/", routes![post_compile_zokrates]);
+        let req_body = r#"{
+            "program": "def main(field N) -> (bool):\n    return (N == 1)"
+        }"#;
+        let program_hash = "6F254BEB568F82539AE89927C00A067CAFB4E068F0A879DDA199481FD7286015".to_string();
+        let program_abi_str = r#"{
+            "inputs": [
+                {
+                    "name": "N",
+                    "public": true,
+                    "type": "field"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bool"
+                }
+            ]
+        }"#;
+        let program_abi: serde_json::Value = serde_json::from_str(program_abi_str)
+            .expect("correct json abi string");
+
+        let client = Client::tracked(server).expect("valid rocket instance");
+        let res = client.post(uri!(post_compile_zokrates))
+            .header(ContentType::JSON)
+            .body(req_body)
+            .dispatch();
+
+        assert_eq!(res.status(), Status::Ok);
+        assert_eq!(res.content_type(), Some(ContentType::JSON));
+
+        let compilation = res.into_json::<CompileResponseBody>()
+            .expect("Compile Response Body");
+        assert_eq!(compilation.program_hash, program_hash);
+        assert_eq!(compilation.abi, program_abi);
     }
 }
