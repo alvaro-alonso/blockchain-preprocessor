@@ -15,7 +15,7 @@ use prover_node::utils::responses::{ApiResult, ApiError};
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
-#[schemars(example="request_example")]
+#[cfg(debug_assertions)] #[schemars(example="request_example")]
 pub struct CompileRequestBody {
     program: String,
 }
@@ -28,7 +28,7 @@ pub struct CompileResponseBody{
     abi: serde_json::Value,
 }
 
-#[openapi]
+#[cfg(debug_assertions)] #[openapi]
 #[post("/compile", data = "<req_body>", format = "json")]
 pub fn post_compile_zokrates(
     req_body: Json<CompileRequestBody>,
@@ -106,6 +106,7 @@ pub fn post_compile_zokrates(
     }
 }
 
+#[cfg(debug_assertions)]
 fn request_example() -> CompileRequestBody {
     let program = read_to_string("proving/proof_of_ownership.zok")
         .expect("example .zok file is missing from repository");

@@ -15,7 +15,7 @@ use prover_node::ops::witness::compute_witness;
 
 #[derive(Deserialize, Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
-#[schemars(example="request_example")]
+#[cfg(debug_assertions)] #[schemars(example="request_example")]
 pub struct WitnessRequestBody {
     pub payload: serde_json::Value,
 }
@@ -27,7 +27,7 @@ pub struct WitnessResponseBody {
     witness: String,
 }
 
-#[openapi]
+#[cfg(debug_assertions)] #[openapi]
 #[post("/<program_hash>/compute-witness", data = "<witness>", format = "json")] //
 pub fn post_witness(program_hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<WitnessResponseBody> {
     // parse input program
@@ -101,6 +101,7 @@ pub fn post_witness(program_hash: &str, witness: Json<WitnessRequestBody>) -> Ap
 //     assert_eq!(proof, blablabla);
 // }
 
+#[cfg(debug_assertions)]
 
 fn request_example() -> WitnessRequestBody {
     let file = read_to_string("proving/witness_abi.json")
