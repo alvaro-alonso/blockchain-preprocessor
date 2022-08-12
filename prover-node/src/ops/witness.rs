@@ -96,6 +96,25 @@ mod test {
             ProgEnum::Bn128Program(p) => compute_witness(p, witness_args, abi),
             _ => unreachable!(),
         };
+        assert!(witness.is_ok());
+
+        let (witness_out, output) = witness.unwrap();
+        assert_eq!(output[0], false);
+        println!("{}", witness_out);
+    }
+
+    #[test]
+    fn test_witness_computation_wrong_abi() {
+        let file = File::open("tests/test").unwrap();
+        let mut reader = BufReader::new(file);
+        let prog = ProgEnum::deserialize(&mut reader).unwrap();
+        let witness_args = serde_json::to_value(["abcd", "2"]).unwrap();
+        let abi = serde_json::from_str(ABI).unwrap();
+
+        let witness = match prog {
+            ProgEnum::Bn128Program(p) => compute_witness(p, witness_args, abi),
+            _ => unreachable!(),
+        };
         assert!(witness.is_err());
     }
 }
