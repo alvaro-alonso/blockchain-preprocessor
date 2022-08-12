@@ -48,8 +48,7 @@ mod test {
     fn test_sucessful_compilation() {
         let code = r#"
             def main(field N) -> (bool):
-                assert(N == 1)
-                return true
+                return N == 1
         "#;
         let code_path = PathBuf::from("/test");
         let arena = Arena::new();
@@ -59,7 +58,7 @@ mod test {
 
         let (compiled_program, _abi) = compilation.unwrap().into_inner();
         let constrain_count = compiled_program.serialize(&stdout()).unwrap();
-        assert_eq!(constrain_count, 2);
+        assert_eq!(constrain_count, 3);
 
         //TODO: assert that abi is equal to:
         //   {
@@ -82,8 +81,7 @@ mod test {
     fn test_wrong_compilation() {
         let code = r#"
             def main(field N):
-                assert(N == 1)
-                return true
+                return N == 1
         "#;
         let code_path = PathBuf::from("/test");
         let arena = Arena::new();
