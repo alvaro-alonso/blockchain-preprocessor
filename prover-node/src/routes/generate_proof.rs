@@ -16,7 +16,7 @@ use prover_node::utils::responses::{ApiResult, ApiError};
 
 #[derive(Deserialize, Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
-#[cfg(debug_assertions)] #[schemars(example="request_example")]
+#[schemars(example="request_example")]
 pub struct GenerateProofRequestBody {
     witness: String,
 }
@@ -28,7 +28,7 @@ pub struct GenerateProofResponseBody {
     pub payload: serde_json::Value,
 }
 
-#[cfg(debug_assertions)] #[openapi]
+#[openapi]
 #[post("/<program_hash>/generate-proof", format = "json", data = "<req_body>")] 
 pub fn post_generate_proof(program_hash: &str, req_body: Json<GenerateProofRequestBody>) -> ApiResult<GenerateProofResponseBody> {
     // parse input program
@@ -110,7 +110,6 @@ pub fn post_generate_proof(program_hash: &str, req_body: Json<GenerateProofReque
 
 
 // Request example for OpenApi Documentation
-#[cfg(debug_assertions)]
 fn request_example() -> GenerateProofRequestBody {
     let witness = r#"~out_0 1
 ~one 1

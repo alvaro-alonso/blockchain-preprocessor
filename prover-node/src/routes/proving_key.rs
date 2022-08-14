@@ -14,7 +14,7 @@ pub struct ProvingKeyResponseBody {
     message: String,
 }
 
-#[cfg(debug_assertions)] #[openapi]
+#[openapi]
 #[post("/<program_hash>/proving-key", data = "<upload>")]
 pub async fn post_proving_key(program_hash: &str, upload: Data<'_>) -> ApiResult<ProvingKeyResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
