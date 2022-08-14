@@ -18,7 +18,7 @@ use crate::compute_witness::WitnessRequestBody;
 use crate::generate_proof::GenerateProofResponseBody;
 
 
-#[cfg(debug_assertions)] #[openapi]
+#[openapi]
 #[post("/<program_hash>/compute-generate-proof", data = "<witness>", format = "json")] //
 pub fn post_compute_generate_proof(program_hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<GenerateProofResponseBody> {
     // parse input program

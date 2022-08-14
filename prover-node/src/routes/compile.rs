@@ -15,7 +15,7 @@ use prover_node::utils::responses::{ApiResult, ApiError};
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
-#[cfg(debug_assertions)] #[schemars(example="request_example")]
+#[schemars(example="request_example")]
 pub struct CompileRequestBody {
     program: String,
 }
@@ -28,7 +28,7 @@ pub struct CompileResponseBody{
     abi: serde_json::Value,
 }
 
-#[cfg(debug_assertions)] #[openapi]
+#[openapi]
 #[post("/compile", data = "<req_body>", format = "json")]
 pub fn post_compile_zokrates(
     req_body: Json<CompileRequestBody>,
@@ -106,7 +106,6 @@ pub fn post_compile_zokrates(
     }
 }
 
-#[cfg(debug_assertions)]
 fn request_example() -> CompileRequestBody {
     CompileRequestBody {
         program: "def main(field N) -> (bool):\n    return (N == 1)".to_string(),

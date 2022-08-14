@@ -15,7 +15,7 @@ struct Task {
     message: String,
 }
 
-#[cfg(debug_assertions)] #[openapi]
+#[openapi]
 #[get("/", format = "json")]
 fn index() -> Json<Task> {
     Json(Task {
