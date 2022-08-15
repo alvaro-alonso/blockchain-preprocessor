@@ -9,7 +9,7 @@ use zokrates_core::ir::ProgEnum;
 use serde_json::from_reader;
 use std::io::BufReader;
 use zokrates_core::typed_absy::abi::Abi;
-use prover_node::utils::responses::{ApiResult, ApiError};
+use prover_node::utils::errors::{ApiResult, ApiError};
 use prover_node::ops::witness::compute_witness;
 
 
