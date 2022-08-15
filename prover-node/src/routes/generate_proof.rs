@@ -11,7 +11,7 @@ use zokrates_core::ir::ProgEnum;
 use zokrates_core::proof_system::ark::Ark;
 use zokrates_core::proof_system::GM17;
 use prover_node::ops::proof::generate_proof;
-use prover_node::utils::responses::{ApiResult, ApiError};
+use prover_node::utils::errors::{ApiResult, ApiError};
 
 
 #[derive(Deserialize, Serialize, JsonSchema)]

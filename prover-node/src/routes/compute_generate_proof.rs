@@ -10,7 +10,7 @@ use std::io::{BufReader, Read};
 use zokrates_core::typed_absy::abi::Abi;
 use zokrates_core::proof_system::ark::Ark;
 use zokrates_core::proof_system::GM17;
-use prover_node::utils::responses::{ApiResult, ApiError};
+use prover_node::utils::errors::{ApiResult, ApiError};
 use prover_node::ops::witness::compute_witness;
 use prover_node::ops::proof::generate_proof;
 

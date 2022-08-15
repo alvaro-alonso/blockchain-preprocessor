@@ -5,7 +5,7 @@ use rocket::data::ToByteUnit;
 use rocket_okapi::openapi;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use std::path::{Path};
-use prover_node::utils::responses::{ApiResult, ApiError};
+use prover_node::utils::errors::{ApiResult, ApiError};
 
 
 #[derive(Serialize, JsonSchema)]
