@@ -48,7 +48,7 @@ pub fn post_compile_zokrates(req_body: Json<CompileRequestBody>) -> ApiResult<Co
 
     // compile .zok code
     let compilation_artifacts = api_compile::<Bn128Field>(&program, &program_path, &arena)
-        .map_err(|e| ApiError::CompilationError(e))?;
+        .map_err(ApiError::CompilationError)?;
     let (compiled_program, abi) = compilation_artifacts.into_inner();
 
     // create dir with the hash of the program
@@ -99,7 +99,7 @@ pub fn post_compile_zokrates(req_body: Json<CompileRequestBody>) -> ApiResult<Co
         Err(e) => {
             // something wrong happened, clean up
             remove_dir_all(path).unwrap();
-            Err(ApiError::InternalError(e.to_string()))
+            Err(ApiError::InternalError(e))
         }
     }
 }

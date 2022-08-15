@@ -109,7 +109,7 @@ pub fn post_compute_generate_proof(
 
             let proof = match prog {
                 ProgEnum::Bn128Program(p) => generate_proof::<_, _, GM17, Ark>(p, witness, pk)
-                    .map_err(|e| ApiError::CompilationError(e.to_string()))?,
+                    .map_err(|e| ApiError::CompilationError(e))?,
                 _ => unreachable!(),
             };
 
