@@ -7,7 +7,7 @@ use zokrates_fs_resolver::FileSystemResolver;
 
 pub fn api_compile<'a, T: Field>(
     code: &'a str,
-    program_path: &'a PathBuf,
+    program_path: &'a Path,
     arena: &'a Arena<String>,
 ) -> Result<CompilationArtifacts<T, impl IntoIterator<Item = Statement<T>> + 'a>, String> {
     let stdlib_path = "zokrates/zokrates_stdlib/stdlib";
@@ -25,11 +25,11 @@ pub fn api_compile<'a, T: Field>(
 
     let program = code.to_string();
     match compile::<T, _>(
-        program.clone(),
-        program_path.clone(),
+        program,
+        program_path.to_path_buf(),
         Some(&resolver),
         config,
-        &arena,
+        arena,
     ) {
         Ok(artifacts) => Ok(artifacts),
         Err(e) => Err(format!(

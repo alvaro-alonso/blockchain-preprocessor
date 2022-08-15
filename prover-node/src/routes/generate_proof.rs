@@ -81,7 +81,7 @@ pub fn post_generate_proof(
     match prog {
         ProgEnum::Bn128Program(p) => {
             let proof = generate_proof::<_, _, GM17, Ark>(p, witness, pk)
-                .map_err(|e| ApiError::CompilationError(e.to_string()))?;
+                .map_err(|e| ApiError::CompilationError(e))?;
 
             let proof_str = serde_json::to_string_pretty(&proof).unwrap();
             log::debug!("Proof:\n{}", proof_str);
