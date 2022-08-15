@@ -3,7 +3,7 @@ use rocket::fs::relative;
 use rocket_okapi::openapi;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde_json::to_writer_pretty;
-use std::fs::{File, create_dir, write, remove_dir_all};
+use std::fs::{File, write, create_dir_all, remove_dir_all};
 use std::io::BufWriter;
 use std::path::Path;
 use typed_arena::Arena;
@@ -53,7 +53,7 @@ pub fn post_compile_zokrates(
     let (compiled_program, abi) = compilation_artifacts.into_inner();
 
     // create dir with the hash of the program
-    create_dir(&path).map_err(|e| ApiError::InternalError(e.to_string()))?;
+    create_dir_all(&path).map_err(|e| ApiError::InternalError(e.to_string()))?;
         
     // if compilation successful write .zok, binary and abi file under the hash folder
     let write_outputs = || -> Result<usize, String> {
