@@ -21,13 +21,17 @@ pub fn health() -> Json<Task> {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    use super::super::super::*;
     use rocket::http::{ContentType, Status};
     use rocket::local::blocking::Client;
 
     #[test]
     fn json_test_index() {
-        let client = Client::tracked(super::rocket()).unwrap();
-        let res = client.get("/health").header(ContentType::JSON).dispatch();
+        let client = Client::tracked(rocket()).unwrap();
+        let res = client.get(uri!(health))
+            .header(ContentType::JSON)
+            .dispatch();
         assert_eq!(res.status(), Status::Ok);
     }
 }

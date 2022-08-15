@@ -51,11 +51,12 @@ pub fn post_compile_zokrates(
     let compilation_artifacts = api_compile::<Bn128Field>(&program, &program_path, &arena)
         .map_err(|e| ApiError::CompilationError(e))?;
     let (compiled_program, abi) = compilation_artifacts.into_inner();
+
+    // create dir with the hash of the program
+    create_dir(&path).map_err(|e| ApiError::InternalError(e.to_string()))?;
         
     // if compilation successful write .zok, binary and abi file under the hash folder
     let write_outputs = || -> Result<usize, String> {
-        // create dir with the hash of the program
-        create_dir(&path).map_err(|e| e.to_string())?;
 
         // serialize flattened program and write to binary file
         log::debug!("Serialize program");
@@ -116,14 +117,12 @@ fn request_example() -> CompileRequestBody {
 #[cfg(test)]
 mod test {
     use super::*;
+    use super::super::super::rocket;
     use rocket::local::blocking::Client;
     use rocket::http::{ContentType, Status};
 
-    // FIXME: currently test can only be run once when program is not run
     #[test]
     fn successful_compilation() {
-        // TODO: import unique rocket_builder for tests and main
-        let server = rocket::build().mount("/", routes![post_compile_zokrates]);
         let req_body = r#"{
             "program": "def main(field N) -> (bool):\n    return (N == 1)"
         }"#;
@@ -145,7 +144,7 @@ mod test {
         let program_abi: serde_json::Value = serde_json::from_str(program_abi_str)
             .expect("correct json abi string");
 
-        let client = Client::tracked(server).expect("valid rocket instance");
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
         let res = client.post(uri!(post_compile_zokrates))
             .header(ContentType::JSON)
             .body(req_body)
@@ -158,5 +157,8 @@ mod test {
             .expect("Compile Response Body");
         assert_eq!(compilation.program_hash, program_hash);
         assert_eq!(compilation.abi, program_abi);
+
+        // delete compilation outputs
+        remove_dir_all(format!("out/{}", program_hash)).unwrap();
     }
 }
