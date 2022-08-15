@@ -7,9 +7,7 @@ use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
 mod routes;
 use routes::*;
 
-
 fn get_docs() -> SwaggerUIConfig {
-
     SwaggerUIConfig {
         url: "/openapi.json".to_string(),
         ..Default::default()
@@ -23,14 +21,13 @@ fn rocket() -> _ {
         .mount(
             "/",
             openapi_get_routes![
-                health::health, 
-                compile::post_compile_zokrates, 
+                health::health,
+                compile::post_compile_zokrates,
                 generate_proof::post_generate_proof,
                 compute_witness::post_witness,
                 proving_key::post_proving_key,
                 compute_generate_proof::post_compute_generate_proof,
             ],
         )
-        .mount("/docs", make_swagger_ui(&get_docs()))      
+        .mount("/docs", make_swagger_ui(&get_docs()))
 }
-
