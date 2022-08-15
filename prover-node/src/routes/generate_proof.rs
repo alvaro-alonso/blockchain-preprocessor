@@ -52,8 +52,7 @@ pub fn post_generate_proof(
     }
     let program_file = File::open(&path).map_err(|e| ApiError::InternalError(e.to_string()))?;
     let mut reader = BufReader::new(program_file);
-    let prog =
-        ProgEnum::deserialize(&mut reader).map_err(|e| ApiError::InternalError(e.to_string()))?;
+    let prog = ProgEnum::deserialize(&mut reader).map_err(|e| ApiError::InternalError(e))?;
     log::debug!("binary deserialization successfull");
 
     // read proving key

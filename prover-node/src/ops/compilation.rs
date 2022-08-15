@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use typed_arena::Arena;
 use zokrates_core::compile::{compile, CompilationArtifacts, CompileConfig};
 use zokrates_core::ir::Statement;
@@ -45,6 +45,7 @@ pub fn api_compile<'a, T: Field>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::path::PathBuf;
     use std::io::stdout;
     use zokrates_field::Bn128Field;
 
