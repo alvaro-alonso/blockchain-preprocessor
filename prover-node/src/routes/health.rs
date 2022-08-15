@@ -1,7 +1,6 @@
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket_okapi::{openapi, JsonSchema};
 
-
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
 pub struct Task {
@@ -21,15 +20,16 @@ pub fn health() -> Json<Task> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use super::super::super::*;
+    use super::*;
     use rocket::http::{ContentType, Status};
     use rocket::local::blocking::Client;
 
     #[test]
     fn json_test_index() {
         let client = Client::tracked(rocket()).unwrap();
-        let res = client.get(uri!(health))
+        let res = client
+            .get(uri!(health))
             .header(ContentType::JSON)
             .dispatch();
         assert_eq!(res.status(), Status::Ok);
