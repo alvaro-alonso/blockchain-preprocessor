@@ -36,7 +36,6 @@ jobs:
     steps:
       - uses: actions-rs/cargo@v1
         with:
-          toolchain: nightly
-          working-directory: prover-node
           command: test
+          args: --manifest-path prover-node/Cargo.toml
       
