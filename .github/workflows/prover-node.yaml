@@ -33,10 +33,10 @@ jobs:
   test:
     needs: lint
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: prover-node
     steps:
       - uses: actions-rs/cargo@v1
         with:
-          run: test
+          toolchain: nightly
+      - name: run tests
+        working-directory: prover-node
+        run: cargo test
