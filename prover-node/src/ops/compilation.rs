@@ -45,8 +45,8 @@ pub fn api_compile<'a, T: Field>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::path::PathBuf;
     use std::io::stdout;
+    use std::path::PathBuf;
     use zokrates_field::Bn128Field;
 
     #[test]
@@ -58,7 +58,7 @@ mod test {
         let code_path = PathBuf::from("/test");
         let arena = Arena::new();
 
-        let compilation = api_compile::<Bn128Field>(&code, &code_path, &arena);
+        let compilation = api_compile::<Bn128Field>(code, &code_path, &arena);
         assert!(compilation.is_ok());
 
         let (compiled_program, _abi) = compilation.unwrap().into_inner();
@@ -91,7 +91,7 @@ mod test {
         let code_path = PathBuf::from("/test");
         let arena = Arena::new();
 
-        let compilation = api_compile::<Bn128Field>(&code, &code_path, &arena);
+        let compilation = api_compile::<Bn128Field>(code, &code_path, &arena);
         assert!(compilation.is_err());
 
         //TODO: assert that error types are the same

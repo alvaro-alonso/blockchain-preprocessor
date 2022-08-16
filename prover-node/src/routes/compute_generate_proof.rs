@@ -51,7 +51,7 @@ pub fn post_compute_generate_proof(
         ApiError::InternalError(format!("Could not open {}: {}", program_dir.display(), why))
     })?;
     let mut reader = BufReader::new(file);
-    let prog = ProgEnum::deserialize(&mut reader).map_err(|why| ApiError::InternalError(why))?;
+    let prog = ProgEnum::deserialize(&mut reader).map_err(ApiError::InternalError)?;
 
     // read abi file
     let mut path = program_dir.join("abi.json");
@@ -104,12 +104,11 @@ pub fn post_compute_generate_proof(
                 ))
             })?;
             let mut reader = BufReader::new(file);
-            let prog =
-                ProgEnum::deserialize(&mut reader).map_err(|why| ApiError::InternalError(why))?;
+            let prog = ProgEnum::deserialize(&mut reader).map_err(ApiError::InternalError)?;
 
             let proof = match prog {
                 ProgEnum::Bn128Program(p) => generate_proof::<_, _, GM17, Ark>(p, witness, pk)
-                    .map_err(|e| ApiError::CompilationError(e))?,
+                    .map_err(ApiError::CompilationError)?,
                 _ => unreachable!(),
             };
 
