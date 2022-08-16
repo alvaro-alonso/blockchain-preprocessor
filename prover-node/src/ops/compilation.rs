@@ -1,17 +1,15 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use typed_arena::Arena;
+use zokrates_core::compile::{compile, CompilationArtifacts, CompileConfig};
 use zokrates_core::ir::Statement;
-use zokrates_core::compile::{compile, CompileConfig, CompilationArtifacts};
 use zokrates_field::Field;
 use zokrates_fs_resolver::FileSystemResolver;
 
-
-pub fn api_compile<'a, T: Field>(code: &'a str, program_path: &'a PathBuf, arena: &'a Arena<String>) 
--> Result<
-    CompilationArtifacts<T, impl IntoIterator<Item = Statement<T>> + 'a>,
-    String
-> {
-
+pub fn api_compile<'a, T: Field>(
+    code: &'a str,
+    program_path: &'a Path,
+    arena: &'a Arena<String>,
+) -> Result<CompilationArtifacts<T, impl IntoIterator<Item = Statement<T>> + 'a>, String> {
     let stdlib_path = "zokrates/zokrates_stdlib/stdlib";
     match Path::new(stdlib_path).exists() {
         true => Ok(()),
@@ -26,7 +24,13 @@ pub fn api_compile<'a, T: Field>(code: &'a str, program_path: &'a PathBuf, arena
     log::debug!("Compile");
 
     let program = code.to_string();
-    match compile::<T, _>(program.clone(), program_path.clone(), Some(&resolver), config, &arena) {
+    match compile::<T, _>(
+        program,
+        program_path.to_path_buf(),
+        Some(&resolver),
+        config,
+        arena,
+    ) {
         Ok(artifacts) => Ok(artifacts),
         Err(e) => Err(format!(
             "Compilation failed:\n\n{}",
@@ -35,14 +39,15 @@ pub fn api_compile<'a, T: Field>(code: &'a str, program_path: &'a PathBuf, arena
                 .collect::<Vec<_>>()
                 .join("\n\n")
         )),
-    }    
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use zokrates_field::Bn128Field;
     use std::io::stdout;
+    use std::path::PathBuf;
+    use zokrates_field::Bn128Field;
 
     #[test]
     fn test_sucessful_compilation() {
@@ -53,7 +58,7 @@ mod test {
         let code_path = PathBuf::from("/test");
         let arena = Arena::new();
 
-        let compilation = api_compile::<Bn128Field>(&code, &code_path, &arena);
+        let compilation = api_compile::<Bn128Field>(code, &code_path, &arena);
         assert!(compilation.is_ok());
 
         let (compiled_program, _abi) = compilation.unwrap().into_inner();
@@ -77,7 +82,7 @@ mod test {
         //   }
     }
 
-        #[test]
+    #[test]
     fn test_wrong_compilation() {
         let code = r#"
             def main(field N):
@@ -86,7 +91,7 @@ mod test {
         let code_path = PathBuf::from("/test");
         let arena = Arena::new();
 
-        let compilation = api_compile::<Bn128Field>(&code, &code_path, &arena);
+        let compilation = api_compile::<Bn128Field>(code, &code_path, &arena);
         assert!(compilation.is_err());
 
         //TODO: assert that error types are the same

@@ -1,28 +1,27 @@
+use prover_node::ops::compilation::api_compile;
+use prover_node::utils::errors::{ApiError, ApiResult};
+use rocket::fs::relative;
 use rocket::serde::{json::Json, Deserialize, Serialize};
-use rocket::fs::{relative};
-use rocket_okapi::openapi;
 use rocket_okapi::okapi::schemars::JsonSchema;
+use rocket_okapi::openapi;
 use serde_json::to_writer_pretty;
-use std::fs::{File, create_dir, write, remove_dir_all, read_to_string};
+use sha2::{Digest, Sha256};
+use std::fs::{create_dir_all, remove_dir_all, write, File};
 use std::io::BufWriter;
 use std::path::Path;
 use typed_arena::Arena;
-use sha2::{Sha256, Digest};
 use zokrates_field::Bn128Field;
-use prover_node::ops::compilation::api_compile;
-use prover_node::utils::responses::{ApiResult, ApiError};
-
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
-#[schemars(example="request_example")]
+#[schemars(example = "request_example")]
 pub struct CompileRequestBody {
     program: String,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
-pub struct CompileResponseBody{
+pub struct CompileResponseBody {
     program_hash: String,
     // Abi type is not supported by JsonSchema
     abi: serde_json::Value,
@@ -30,16 +29,16 @@ pub struct CompileResponseBody{
 
 #[openapi]
 #[post("/compile", data = "<req_body>", format = "json")]
-pub fn post_compile_zokrates(
-    req_body: Json<CompileRequestBody>,
-) -> ApiResult<CompileResponseBody> {
+pub fn post_compile_zokrates(req_body: Json<CompileRequestBody>) -> ApiResult<CompileResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
     let program = req_body.program.clone();
     let program_hash = format!("{:X}", Sha256::digest(&program));
     let path = Path::new(relative!("out")).join(&program_hash);
     if path.is_dir() {
-        return Err(ApiError::ResourceAlreadyExists(String::from("proof already exists")))
-    } 
+        return Err(ApiError::ResourceAlreadyExists(String::from(
+            "proof already exists",
+        )));
+    }
 
     // create all file paths
     let program_path = path.join("program.zok");
@@ -49,20 +48,21 @@ pub fn post_compile_zokrates(
 
     // compile .zok code
     let compilation_artifacts = api_compile::<Bn128Field>(&program, &program_path, &arena)
-        .map_err(|e| ApiError::CompilationError(e))?;
+        .map_err(ApiError::CompilationError)?;
     let (compiled_program, abi) = compilation_artifacts.into_inner();
-        
+
+    // create dir with the hash of the program
+    create_dir_all(&path).map_err(|e| ApiError::InternalError(e.to_string()))?;
+
     // if compilation successful write .zok, binary and abi file under the hash folder
     let write_outputs = || -> Result<usize, String> {
-        // create dir with the hash of the program
-        create_dir(&path).map_err(|e| e.to_string())?;
-
         // serialize flattened program and write to binary file
         log::debug!("Serialize program");
         let bin_output_file = File::create(&bin_output_path)
             .map_err(|why| format!("Could not create {}: {}", bin_output_path.display(), why))?;
         let mut writer = BufWriter::new(bin_output_file);
-        let constrain_count = compiled_program.serialize(&mut writer)
+        let constrain_count = compiled_program
+            .serialize(&mut writer)
             .map_err(|e| e.to_string())?;
 
         // serialize ABI spec and write to JSON file
@@ -75,62 +75,55 @@ pub fn post_compile_zokrates(
 
         // write .zok file in folder
         write(&program_path, &program).expect("Unable to write .zok file");
-    
+
         Ok(constrain_count)
     };
-    
+
     match write_outputs() {
         Ok(constrain_count) => {
             log::info!("zokrates program written to '{}'", program_path.display());
             log::info!("Compiled code written to '{}'", bin_output_path.display());
             log::info!("abi file written to '{}'", abi_spec_path.display());
             log::info!("Number of constraints: {}", constrain_count);
-            
+
             // convert abi type to json value
             let abi_str = serde_json::to_string_pretty(&abi).unwrap();
             log::debug!("Proof:\n{}", abi_str);
             let abi_json = serde_json::from_str(&abi_str).unwrap();
 
-            Ok(Json(
-                CompileResponseBody {
-                    program_hash,
-                    abi: abi_json,
-                }
-            ))
-        },
+            Ok(Json(CompileResponseBody {
+                program_hash,
+                abi: abi_json,
+            }))
+        }
         Err(e) => {
             // something wrong happened, clean up
             remove_dir_all(path).unwrap();
-            Err(ApiError::InternalError(e.to_string()))
-        },
+            Err(ApiError::InternalError(e))
+        }
     }
 }
 
 fn request_example() -> CompileRequestBody {
-    let program = read_to_string("proving/proof_of_ownership.zok")
-        .expect("example .zok file is missing from repository");
-    
-        CompileRequestBody {
-        program, 
+    CompileRequestBody {
+        program: "def main(field N) -> (bool):\n    return (N == 1)".to_string(),
     }
 }
 
-
 #[cfg(test)]
 mod test {
+    use super::super::super::rocket;
     use super::*;
-    use rocket::local::blocking::Client;
     use rocket::http::{ContentType, Status};
+    use rocket::local::blocking::Client;
 
-    // FIXME: currently test can only be run once when program is not run
     #[test]
     fn successful_compilation() {
-        // TODO: import unique rocket_builder for tests and main
-        let server = rocket::build().mount("/", routes![post_compile_zokrates]);
         let req_body = r#"{
             "program": "def main(field N) -> (bool):\n    return (N == 1)"
         }"#;
-        let program_hash = "6F254BEB568F82539AE89927C00A067CAFB4E068F0A879DDA199481FD7286015".to_string();
+        let program_hash =
+            "6F254BEB568F82539AE89927C00A067CAFB4E068F0A879DDA199481FD7286015".to_string();
         let program_abi_str = r#"{
             "inputs": [
                 {
@@ -145,11 +138,12 @@ mod test {
                 }
             ]
         }"#;
-        let program_abi: serde_json::Value = serde_json::from_str(program_abi_str)
-            .expect("correct json abi string");
+        let program_abi: serde_json::Value =
+            serde_json::from_str(program_abi_str).expect("correct json abi string");
 
-        let client = Client::tracked(server).expect("valid rocket instance");
-        let res = client.post(uri!(post_compile_zokrates))
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
+        let res = client
+            .post(uri!(post_compile_zokrates))
             .header(ContentType::JSON)
             .body(req_body)
             .dispatch();
@@ -157,9 +151,13 @@ mod test {
         assert_eq!(res.status(), Status::Ok);
         assert_eq!(res.content_type(), Some(ContentType::JSON));
 
-        let compilation = res.into_json::<CompileResponseBody>()
+        let compilation = res
+            .into_json::<CompileResponseBody>()
             .expect("Compile Response Body");
         assert_eq!(compilation.program_hash, program_hash);
         assert_eq!(compilation.abi, program_abi);
+
+        // delete compilation outputs
+        remove_dir_all(format!("out/{}", program_hash)).unwrap();
     }
 }

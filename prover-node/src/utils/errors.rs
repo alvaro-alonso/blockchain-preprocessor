@@ -1,20 +1,18 @@
-use rocket::serde::{json::Json, Serialize};
-use rocket::{response, response::Responder};
 use rocket::http::Status;
 use rocket::request::Request;
-use schemars::Map;
+use rocket::serde::{json::Json, Serialize};
+use rocket::{response, response::Responder};
 use rocket_okapi::{
-    JsonSchema,
     gen::OpenApiGenerator,
     okapi::openapi3::{RefOr, Response as OpenApiReponse, Responses},
     response::OpenApiResponderInner,
+    JsonSchema,
 };
-
+use schemars::Map;
 
 pub type ApiResult<T> = Result<Json<T>, ApiError>;
 
-
-#[derive(Debug, PartialEq, JsonSchema)]
+#[derive(Debug, PartialEq, Eq, JsonSchema)]
 pub enum ApiError {
     ResourceAlreadyExists(String),
     ResourceNotFound(String),
@@ -33,8 +31,9 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for ApiError {
         // log `self` to your favored error tracker, e.g.
         // sentry::capture_error(&self);
         let mut res = Json(ErrorResponse {
-			error_message: format!("{:?}", self).to_string()
-		}).respond_to(req)?;
+            error_message: format!("{:?}", self),
+        })
+        .respond_to(req)?;
 
         match self {
             ApiError::CompilationError(_) => res.set_status(Status::BadRequest),
@@ -117,4 +116,3 @@ impl OpenApiResponderInner for ApiError {
         })
     }
 }
-
