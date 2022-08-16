@@ -54,7 +54,7 @@ pub fn post_witness(
         ApiError::InternalError(format!("Could not open {}: {}", program_dir.display(), why))
     })?;
     let mut reader = BufReader::new(file);
-    let prog = ProgEnum::deserialize(&mut reader).map_err(|why| ApiError::InternalError(why))?;
+    let prog = ProgEnum::deserialize(&mut reader).map_err(ApiError::InternalError)?;
 
     // read abi file
     path = program_dir.join("abi.json");

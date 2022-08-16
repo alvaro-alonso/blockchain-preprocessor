@@ -52,7 +52,7 @@ pub fn post_generate_proof(
     }
     let program_file = File::open(&path).map_err(|e| ApiError::InternalError(e.to_string()))?;
     let mut reader = BufReader::new(program_file);
-    let prog = ProgEnum::deserialize(&mut reader).map_err(|e| ApiError::InternalError(e))?;
+    let prog = ProgEnum::deserialize(&mut reader).map_err(ApiError::InternalError)?;
     log::debug!("binary deserialization successfull");
 
     // read proving key
@@ -81,7 +81,7 @@ pub fn post_generate_proof(
     match prog {
         ProgEnum::Bn128Program(p) => {
             let proof = generate_proof::<_, _, GM17, Ark>(p, witness, pk)
-                .map_err(|e| ApiError::CompilationError(e))?;
+                .map_err(ApiError::CompilationError)?;
 
             let proof_str = serde_json::to_string_pretty(&proof).unwrap();
             log::debug!("Proof:\n{}", proof_str);
