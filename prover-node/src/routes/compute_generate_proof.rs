@@ -1,30 +1,39 @@
-use rocket::post;
-use rocket::serde::{json::Json};
+use prover_node::ops::proof::generate_proof;
+use prover_node::ops::witness::compute_witness;
+use prover_node::utils::errors::{ApiError, ApiResult};
 use rocket::fs::relative;
+use rocket::post;
+use rocket::serde::json::Json;
 use rocket_okapi::openapi;
+use serde_json::from_reader;
 use std::fs::File;
-use std::path::{Path};
-use zokrates_core::ir::ProgEnum;
-use serde_json::{from_reader};
 use std::io::{BufReader, Read};
-use zokrates_core::typed_absy::abi::Abi;
+use std::path::Path;
+use zokrates_core::ir::ProgEnum;
 use zokrates_core::proof_system::ark::Ark;
 use zokrates_core::proof_system::GM17;
-use prover_node::utils::responses::{ApiResult, ApiError};
-use prover_node::ops::witness::compute_witness;
-use prover_node::ops::proof::generate_proof;
+use zokrates_core::typed_absy::abi::Abi;
 
 use crate::compute_witness::WitnessRequestBody;
 use crate::generate_proof::GenerateProofResponseBody;
 
-
 #[openapi]
-#[post("/<program_hash>/compute-generate-proof", data = "<witness>", format = "json")] //
-pub fn post_compute_generate_proof(program_hash: &str, witness: Json<WitnessRequestBody>) -> ApiResult<GenerateProofResponseBody> {
+#[post(
+    "/<program_hash>/compute-generate-proof",
+    data = "<witness>",
+    format = "json"
+)] //
+pub fn post_compute_generate_proof(
+    program_hash: &str,
+    witness: Json<WitnessRequestBody>,
+) -> ApiResult<GenerateProofResponseBody> {
     // parse input program
     let program_dir = Path::new(relative!("out")).join(&program_hash);
     if !program_dir.is_dir() {
-        return Err(ApiError::ResourceNotFound(format!("Proof {} have not been registered", program_hash)))
+        return Err(ApiError::ResourceNotFound(format!(
+            "Proof {} have not been registered",
+            program_hash
+        )));
     }
 
     log::debug!("Reading all necessary files...");
@@ -33,54 +42,73 @@ pub fn post_compute_generate_proof(program_hash: &str, witness: Json<WitnessRequ
     // read binary file
     let bin_path = program_dir.join("out");
     if !bin_path.exists() {
-        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", program_hash)))
+        return Err(ApiError::ResourceNotFound(format!(
+            "Binary file for proof {} does not exists. Commile the program first",
+            program_hash
+        )));
     }
-    let mut file = File::open(&bin_path)
-        .map_err(|why| ApiError::InternalError(format!("Could not open {}: {}", program_dir.display(), why)))?;
+    let mut file = File::open(&bin_path).map_err(|why| {
+        ApiError::InternalError(format!("Could not open {}: {}", program_dir.display(), why))
+    })?;
     let mut reader = BufReader::new(file);
-    let prog = ProgEnum::deserialize(&mut reader).map_err(|why| ApiError::InternalError(why.to_string()))?;
+    let prog = ProgEnum::deserialize(&mut reader).map_err(ApiError::InternalError)?;
 
     // read abi file
     let mut path = program_dir.join("abi.json");
     if !path.exists() {
-        return Err(ApiError::ResourceNotFound(format!("ABI file for proof {} does not exists. Commile the program first", program_hash)))
+        return Err(ApiError::ResourceNotFound(format!(
+            "ABI file for proof {} does not exists. Commile the program first",
+            program_hash
+        )));
     }
-    file = File::open(&path)
-        .map_err(|why| ApiError::InternalError(format!("Could not open {}: {}", path.display(), why)))?;
+    file = File::open(&path).map_err(|why| {
+        ApiError::InternalError(format!("Could not open {}: {}", path.display(), why))
+    })?;
     let mut reader = BufReader::new(file);
-    let abi: Abi = from_reader(&mut reader).map_err(|why| ApiError::InternalError(why.to_string()))?;
+    let abi: Abi =
+        from_reader(&mut reader).map_err(|why| ApiError::InternalError(why.to_string()))?;
 
     // read proving key
     path = program_dir.join("proving.key");
     if !path.exists() {
-        return Err(ApiError::ResourceNotFound(format!("Binary file for proof {} does not exists. Commile the program first", program_hash)))
+        return Err(ApiError::ResourceNotFound(format!(
+            "Binary file for proof {} does not exists. Commile the program first",
+            program_hash
+        )));
     }
-    let pk_file = File::open(&path)
-        .map_err(|why| ApiError::InternalError(format!("Could not open {}: {}", path.display(), why)))?;
+    let pk_file = File::open(&path).map_err(|why| {
+        ApiError::InternalError(format!("Could not open {}: {}", path.display(), why))
+    })?;
     let mut pk: Vec<u8> = Vec::new();
     let mut pk_reader = BufReader::new(pk_file);
-    pk_reader
-        .read_to_end(&mut pk)
-        .map_err(|why| ApiError::InternalError(format!("Could not read {}: {}", path.display(), why)))?;
+    pk_reader.read_to_end(&mut pk).map_err(|why| {
+        ApiError::InternalError(format!("Could not read {}: {}", path.display(), why))
+    })?;
     log::debug!("read proving key successfully");
 
     match prog {
         ProgEnum::Bn128Program(p) => {
             log::debug!("Computing witness...");
-            let (witness, _output) = compute_witness(p, witness.payload.clone(), abi)
-                .map_err(|err| ApiError::CompilationError(format!("error computing witness:\n {}", err)))?;
-            
+            let (witness, _output) =
+                compute_witness(p, witness.payload.clone(), abi).map_err(|err| {
+                    ApiError::CompilationError(format!("error computing witness:\n {}", err))
+                })?;
+
             log::debug!("Generating proof...");
             // TODO: binary is being read twice, due to move ownership in compute_witnes
-            let file = File::open(&bin_path)
-                .map_err(|why| ApiError::InternalError(format!("Could not open {}: {}", program_dir.display(), why)))?;
+            let file = File::open(&bin_path).map_err(|why| {
+                ApiError::InternalError(format!(
+                    "Could not open {}: {}",
+                    program_dir.display(),
+                    why
+                ))
+            })?;
             let mut reader = BufReader::new(file);
-            let prog = ProgEnum::deserialize(&mut reader).map_err(|why| ApiError::InternalError(why.to_string()))?;
-            
+            let prog = ProgEnum::deserialize(&mut reader).map_err(ApiError::InternalError)?;
+
             let proof = match prog {
-                ProgEnum::Bn128Program(p) => {
-                    generate_proof::<_, _, GM17, Ark>(p, witness, pk).map_err(|e| ApiError::CompilationError(e.to_string()))?
-                },
+                ProgEnum::Bn128Program(p) => generate_proof::<_, _, GM17, Ark>(p, witness, pk)
+                    .map_err(ApiError::CompilationError)?,
                 _ => unreachable!(),
             };
 
@@ -88,16 +116,13 @@ pub fn post_compute_generate_proof(program_hash: &str, witness: Json<WitnessRequ
             log::debug!("Proof:\n{}", proof_str);
             let proof_json = serde_json::from_str(&proof_str).unwrap();
 
-            Ok(Json(
-                GenerateProofResponseBody { payload: proof_json }
-            ))
-        },
+            Ok(Json(GenerateProofResponseBody {
+                payload: proof_json,
+            }))
+        }
         _ => unreachable!(),
     }
 }
-
-
-
 
 // FIXME: add unittest for route
 // #[cfg(test)] use rocket::local::blocking::Client;

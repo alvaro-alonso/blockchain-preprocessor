@@ -1,10 +1,9 @@
-use zokrates_core::ir;
-use zokrates_field::Field;
 use serde_json::to_string;
 use zokrates_abi::Encode;
-use zokrates_core::typed_absy::abi::Abi;
 use zokrates_abi::Inputs;
-
+use zokrates_core::ir;
+use zokrates_core::typed_absy::abi::Abi;
+use zokrates_field::Field;
 
 pub fn compute_witness<T: Field, I: Iterator<Item = ir::Statement<T>>>(
     ir_prog: ir::ProgIterator<T, I>,
@@ -15,7 +14,7 @@ pub fn compute_witness<T: Field, I: Iterator<Item = ir::Statement<T>>>(
     let signature = abi.signature();
 
     // get arguments
-    let input =  match to_string(&arguments) {
+    let input = match to_string(&arguments) {
         Ok(args) => {
             use zokrates_abi::parse_strict;
 
@@ -40,16 +39,14 @@ pub fn compute_witness<T: Field, I: Iterator<Item = ir::Statement<T>>>(
 
     log::debug!("\nWitness: \n{}\n", results_json_value);
     Ok((witness, results_json_value))
-
 }
-
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use zokrates_core::ir::ProgEnum;
     use std::fs::File;
     use std::io::BufReader;
+    use zokrates_core::ir::ProgEnum;
 
     const ABI: &str = r#"{
             "inputs": [

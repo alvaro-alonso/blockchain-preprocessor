@@ -2,7 +2,6 @@ use zokrates_core::ir;
 use zokrates_core::proof_system::*;
 use zokrates_field::Field;
 
-
 pub fn generate_proof<
     T: Field,
     I: Iterator<Item = ir::Statement<T>>,
@@ -18,13 +17,12 @@ pub fn generate_proof<
     Ok(TaggedProof::<T, S>::new(proof.proof, proof.inputs))
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
-    use zokrates_core::ir::ProgEnum;
     use std::fs::File;
     use std::io::{BufReader, Read};
+    use zokrates_core::ir::ProgEnum;
     use zokrates_core::proof_system::ark::Ark;
     use zokrates_core::proof_system::GM17;
 
@@ -73,7 +71,7 @@ _3 1"#;
         let mut pk: Vec<u8> = Vec::new();
         let mut pk_reader = BufReader::new(pk_file);
         pk_reader.read_to_end(&mut pk).unwrap();
-        
+
         let proof = match prog {
             ProgEnum::Bn128Program(p) => generate_proof::<_, _, GM17, Ark>(p, witness, pk),
             _ => unreachable!(),
