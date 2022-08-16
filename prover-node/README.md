@@ -1,11 +1,5 @@
 # Setup 
 
-## Docker
-If you have Docker installed in your machine you can simply run:
-```bash
-$ docker-compose up
-```
-
 ## locally:
 ```bash
 $ RUST_MIN_STACK=838860 cargo +nightly run
