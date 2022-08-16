@@ -37,6 +37,6 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           toolchain: nightly
-      - name: run tests
-        working-directory: prover-node
-        run: cargo test
+          working-directory: prover-node
+          command: test
+      
