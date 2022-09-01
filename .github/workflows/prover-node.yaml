@@ -35,6 +35,7 @@ jobs:
       - name: clippy linting
         uses: actions-rs/clippy-check@v1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           args: --no-deps --manifest-path prover-node/Cargo.toml -- -D warnings
 
   test:
