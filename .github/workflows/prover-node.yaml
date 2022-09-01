@@ -32,11 +32,12 @@ jobs:
         with:
           command: fmt 
           args: --all --manifest-path prover-node/Cargo.toml -- --check
-      - name: clippy linting
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --no-deps --manifest-path prover-node/Cargo.toml -- -D warnings
+      # FIXME: skip clippy step as --no-deps option is not working on github acitons
+      # - name: clippy
+      #   uses: actions-rs/cargo@v1
+      #   with:
+      #     command: clippy 
+      #     args: --no-deps --manifest-path prover-node/Cargo.toml -- -D warnings
 
   test:
     needs: lint
@@ -45,6 +46,9 @@ jobs:
       run:
         working-directory: prover-node
     steps:
-      - uses: actions-rs/cargo@v1
+      - uses: actions/checkout@v2
+      - name: run unit-test
+        uses: actions-rs/cargo@v1
         with:
-          run: test
+          command: test
+          args: --manifest-path prover-node/Cargo.toml
