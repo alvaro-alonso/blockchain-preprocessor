@@ -31,12 +31,12 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt 
-          args: --all --manifest-path ./prover-node/Cargo.toml -- --check
+          args: --all --manifest-path prover-node/Cargo.toml -- --check
       - name: clippy linting
         uses: actions-rs/cargo@v1
         with:
           command: clippy 
-          args: --manifest-path ./prover-node/Cargo.toml -- -D warnings
+          args: --no-deps --manifest-path prover-node/Cargo.toml -- -D warnings
 
   test:
     needs: lint
