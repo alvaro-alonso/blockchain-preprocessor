@@ -23,12 +23,16 @@ jobs:
       run:
         working-directory: prover-node
     steps:
-      - uses: actions-rs/cargo@v1
+      - name: format check
+        uses: actions-rs/cargo@v1
         with:
-          run: fmt --all -- --check
-      - uses: actions-rs/cargo@v1
+          command: fmt 
+          args: --all --manifest-path ./prover-node/Cargo.toml -- --check
+      - name: clippy linting
+        uses: actions-rs/cargo@v1
         with:
-          run: clippy -- -D warnings
+          command: clippy 
+          args: --manifest-path ./prover-node/Cargo.toml -- -D warnings
 
   test:
     needs: lint
