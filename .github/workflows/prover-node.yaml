@@ -33,9 +33,8 @@ jobs:
           command: fmt 
           args: --all --manifest-path prover-node/Cargo.toml -- --check
       - name: clippy linting
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/clippy-check@v1
         with:
-          command: clippy 
           args: --no-deps --manifest-path prover-node/Cargo.toml -- -D warnings
 
   test:
