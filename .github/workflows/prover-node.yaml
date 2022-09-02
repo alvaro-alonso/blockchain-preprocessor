@@ -21,7 +21,7 @@ jobs:
         run: |
           cd prover-node
           cargo fmt --all -- --check
-          cargo clippy -- -D warnings
+          cargo clippy --no-deps -- -D warnings
 
   test:
     needs: lint

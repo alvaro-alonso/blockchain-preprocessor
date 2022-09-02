@@ -28,7 +28,7 @@ pub fn post_compute_generate_proof(
     witness: Json<WitnessRequestBody>,
 ) -> ApiResult<GenerateProofResponseBody> {
     // parse input program
-    let program_dir = Path::new(relative!("out")).join(&program_hash);
+    let program_dir = Path::new(relative!("out")).join(program_hash);
     if !program_dir.is_dir() {
         return Err(ApiError::ResourceNotFound(format!(
             "Proof {} have not been registered",

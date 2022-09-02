@@ -20,7 +20,7 @@ pub async fn post_proving_key(
     upload: Data<'_>,
 ) -> ApiResult<ProvingKeyResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
-    let path = Path::new(relative!("out")).join(&program_hash);
+    let path = Path::new(relative!("out")).join(program_hash);
     if !path.is_dir() {
         return Err(ApiError::ResourceNotFound(format!(
             "Proof {} have not been registered",
