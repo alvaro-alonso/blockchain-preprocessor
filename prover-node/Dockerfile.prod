@@ -1,6 +1,6 @@
 FROM rustlang/rust:nightly-alpine3.15 as build
 
-WORKDIR /app
+WORKDIR /build
 
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
@@ -17,8 +17,8 @@ FROM alpine:3.16.0 as runner
 RUN apk update \
     && apk add --no-cache ca-certificates tzdata
 
-COPY --from=build /app/target/release /
-COPY --from=build /app/Rocket.toml /
-COPY --from=build /app/zokrates /zokrates
+COPY --from=build /build/target/release /
+COPY --from=build /build/Rocket.toml /
+COPY --from=build /build/zokrates/zokrates_stdlib/stdlib /zokrates/zokrates_stdlib/stdlib
 
 ENTRYPOINT [ "./prover_node" ]
