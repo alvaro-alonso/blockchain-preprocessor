@@ -7,7 +7,7 @@ name: Prover
 
 jobs:
 
-  lint:
+  lint_and_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -17,23 +17,14 @@ jobs:
           toolchain: nightly
           override: true
           components: rustfmt, clippy
-      - name: linting check
+      
+      - name: Lint
         run: |
           cd prover-node
           cargo fmt --all -- --check
           cargo clippy --no-deps -- -D warnings
 
-  test:
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - name: run unit-test
+      - name: Test
         run: |
           cd prover-node
           cargo test
