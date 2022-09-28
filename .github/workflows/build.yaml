@@ -34,7 +34,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
-          context: "{{defaultContext}}:prover-node"
+          context: ./prover-node
           push: true
           file: Dockerfile.prod
           tags: alvaround/zokrates-api:latest
