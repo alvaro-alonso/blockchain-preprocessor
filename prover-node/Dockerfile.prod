@@ -2,11 +2,11 @@ FROM rustlang/rust:nightly-alpine3.15 as build
 
 WORKDIR /build
 
-COPY ./prover-node/Cargo.lock ./Cargo.lock
-COPY ./prover-node/Cargo.toml ./Cargo.toml
-COPY ./prover-node/Rocket.toml ./Rocket.toml
-COPY ./prover-node/zokrates ./zokrates
-COPY ./prover-node/src ./src
+COPY Cargo.lock ./Cargo.lock
+COPY Cargo.toml ./Cargo.toml
+COPY Rocket.toml ./Rocket.toml
+COPY zokrates ./zokrates
+COPY src ./src
 
 RUN apk add --no-cache musl-dev
 
