@@ -36,5 +36,5 @@ jobs:
         with:
           context: ./prover-node
           push: true
-          file: Dockerfile.prod
+          file: ./prover-node/Dockerfile.prod
           tags: alvaround/zokrates-api:latest
