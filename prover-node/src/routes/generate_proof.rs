@@ -34,7 +34,7 @@ pub fn post_generate_proof(
     req_body: Json<GenerateProofRequestBody>,
 ) -> ApiResult<GenerateProofResponseBody> {
     // parse input program
-    let program_dir = Path::new(relative!("out")).join(&program_hash);
+    let program_dir = Path::new(relative!("out")).join(program_hash);
     if !program_dir.is_dir() {
         return Err(ApiError::ResourceNotFound(format!(
             "Proof {} have not been registered",

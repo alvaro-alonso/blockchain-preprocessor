@@ -1,6 +1,5 @@
 [default]
 address = "0.0.0.0"
-log_level = "info"
 limits = { json = "10MiB" }
 
 [debug]
