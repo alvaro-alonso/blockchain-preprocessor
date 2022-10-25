@@ -1,8 +1,8 @@
 use prover_node::ops::proof::generate_proof;
+use prover_node::utils::config::AppConfig;
 use prover_node::utils::errors::{ApiError, ApiResult};
-use rocket::fs::relative;
-use rocket::post;
 use rocket::serde::{json::Json, Deserialize, Serialize};
+use rocket::{post, State};
 use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::openapi;
 use std::fs::File;
@@ -32,9 +32,10 @@ pub struct GenerateProofResponseBody {
 pub fn post_generate_proof(
     program_hash: &str,
     req_body: Json<GenerateProofRequestBody>,
+    config: &State<AppConfig>,
 ) -> ApiResult<GenerateProofResponseBody> {
     // parse input program
-    let program_dir = Path::new(relative!("out")).join(program_hash);
+    let program_dir = Path::new(&config.out_dir).join(&program_hash);
     if !program_dir.is_dir() {
         return Err(ApiError::ResourceNotFound(format!(
             "Proof {} have not been registered",
