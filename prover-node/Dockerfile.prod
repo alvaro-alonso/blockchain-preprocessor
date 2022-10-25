@@ -16,8 +16,10 @@ FROM alpine:3.16.0 as runner
 RUN apk update \
     && apk add --no-cache ca-certificates tzdata
 
-COPY --from=build /build/target/release /
-COPY --from=build /build/Rocket.toml /
-COPY --from=build /build/zokrates/zokrates_stdlib/stdlib /zokrates/zokrates_stdlib/stdlib
+WORKDIR /app
+
+COPY --from=build /build/target/release .
+COPY --from=build /build/Rocket.toml .
+COPY --from=build /build/zokrates/zokrates_stdlib/stdlib ./zokrates/zokrates_stdlib/stdlib
 
 ENTRYPOINT [ "./prover_node" ]
