@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
+  namespace: st-alonso
   name: prover-service
   labels:
     app: prover-node
@@ -16,6 +17,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prover-deployment
+  namespace: st-alonso
   labels:
     app: prover-node
 spec:
