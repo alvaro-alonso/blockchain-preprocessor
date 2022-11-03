@@ -10,8 +10,12 @@ spec:
   ports:
   - port: 8000
     protocol: TCP
+    targetPort: 8000
+    nodePort: 30123
   selector:
     app: zokrates-api 
+status:
+  loadBalancer: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
