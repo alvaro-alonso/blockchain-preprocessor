@@ -3,9 +3,14 @@
 # will have compiled files and executables
 prover-node/target/
 prover-node/zokrates/zokrates_core/target
+prover-node/zokrates/zokrates_test
 
 # output folder of endpoints
 prover-node/out
+
+# destination containing dataset
+tests/dataset/raw
+tests/dataset/*.csv
 
 # Remove Cargo.lock from gitignore if creating an executable, leave it for libraries
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html

@@ -2,6 +2,6 @@ This directory contain a sample data from [blogpv](https://blogpv.net/) in data.
 
 The glosary of the data you can find it here:
 
- ![glossary](BlogPVData.jpg) 
+ ![glossary](dataset/BlogPVData.jpg) 
 
 
