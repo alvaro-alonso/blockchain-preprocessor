@@ -34,7 +34,7 @@ pub fn post_witness(
     config: &State<AppConfig>,
 ) -> ApiResult<WitnessResponseBody> {
     // parse input program
-    let program_dir = Path::new(&config.out_dir).join(&program_hash);
+    let program_dir = Path::new(&config.out_dir).join(program_hash);
     if !program_dir.is_dir() {
         return Err(ApiError::ResourceNotFound(format!(
             "Proof {} have not been registered",
