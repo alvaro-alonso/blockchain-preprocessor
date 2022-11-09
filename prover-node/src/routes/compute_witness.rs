@@ -1,8 +1,8 @@
 use prover_node::ops::witness::compute_witness;
+use prover_node::utils::config::AppConfig;
 use prover_node::utils::errors::{ApiError, ApiResult};
-use rocket::fs::relative;
-use rocket::post;
 use rocket::serde::{json::Json, Deserialize, Serialize};
+use rocket::{post, State};
 use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::openapi;
 use serde_json::from_reader;
@@ -31,9 +31,10 @@ pub struct WitnessResponseBody {
 pub fn post_witness(
     program_hash: &str,
     witness: Json<WitnessRequestBody>,
+    config: &State<AppConfig>,
 ) -> ApiResult<WitnessResponseBody> {
     // parse input program
-    let program_dir = Path::new(relative!("out")).join(program_hash);
+    let program_dir = Path::new(&config.out_dir).join(program_hash);
     if !program_dir.is_dir() {
         return Err(ApiError::ResourceNotFound(format!(
             "Proof {} have not been registered",

@@ -8,11 +8,11 @@ $ docker-compose up
 
 ## locally:
 ```bash
-$ RUST_MIN_STACK=838860 cargo +nightly run
+$ RUST_MIN_STACK=1000000 cargo +nightly run
 ```
 Or with hot-loading:
 ```bash
-$ RUST_MIN_STACK=838860 cargo +nightly watch -x run
+$ RUST_MIN_STACK=1000000 cargo +nightly watch -x run
 ```
 
 # Run production container

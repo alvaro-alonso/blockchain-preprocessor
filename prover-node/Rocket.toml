@@ -2,6 +2,8 @@
 address = "0.0.0.0"
 limits = { json = "10MiB" }
 
+out_dir = "out"
+
 [debug]
 log_level = "debug"
 workers = 2
