@@ -1,8 +1,8 @@
+use prover_node::utils::config::AppConfig;
 use prover_node::utils::errors::{ApiError, ApiResult};
 use rocket::data::ToByteUnit;
-use rocket::fs::relative;
 use rocket::serde::{json::Json, Serialize};
-use rocket::Data;
+use rocket::{Data, State};
 use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::openapi;
 use std::path::Path;
@@ -18,9 +18,10 @@ pub struct ProvingKeyResponseBody {
 pub async fn post_proving_key(
     program_hash: &str,
     upload: Data<'_>,
+    config: &State<AppConfig>,
 ) -> ApiResult<ProvingKeyResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
-    let path = Path::new(relative!("out")).join(program_hash);
+    let path = Path::new(&config.out_dir).join(program_hash);
     if !path.is_dir() {
         return Err(ApiError::ResourceNotFound(format!(
             "Proof {} have not been registered",
