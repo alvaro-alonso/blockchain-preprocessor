@@ -45,6 +45,9 @@ spec:
           limits:
             memory: "500Mi"
             cpu: "500m"
+        volumeMounts:
+        - name: zfs
+          mountPath: /app/out
         ports:
         - containerPort: 8000
         livenessProbe:
@@ -57,3 +60,7 @@ spec:
           initialDelaySeconds: 10
           failureThreshold: 3
           periodSeconds: 10
+      volumes:
+        - name: zfs
+          persistentVolumeClaim:
+            claimName: zokrates-zfs-pvc
