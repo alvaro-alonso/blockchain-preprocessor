@@ -11,11 +11,16 @@
     ```
 1. Create deploy and service:
     ```
-    $ kubectl create -f prover.yaml
-    $ kubectl get all -l app=prover-node
+    $ minikube kubectl --  -n st-alonso get ns,svc,deploy
     ```
+    If ns, svc, and deploy not setup:
+    ```sh
+    $ minikube kubectl -- create -f namespace.yaml -f prover.yaml
+    ```
+    
 1. Open service:
     ```
-    $ minikube service prover-service
+    minikube service -n st-alonso zokrates-service --url
     ```
-1. Open the follwing link in the browser: http://127.0.0.1:56114/docs
+    Click on the output link and go to the `/docs` url. You should now see the OpenAPI interface on your browser.
+

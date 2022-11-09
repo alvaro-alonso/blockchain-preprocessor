@@ -1,8 +1,11 @@
 #[macro_use]
 extern crate rocket;
 
+use rocket::fairing::AdHoc;
 use rocket_okapi::openapi_get_routes;
 use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
+
+use prover_node::utils::config::AppConfig;
 
 mod routes;
 use routes::*;
@@ -30,4 +33,5 @@ fn rocket() -> _ {
             ],
         )
         .mount("/docs", make_swagger_ui(&get_docs()))
+        .attach(AdHoc::config::<AppConfig>())
 }

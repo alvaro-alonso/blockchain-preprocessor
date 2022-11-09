@@ -1,7 +1,8 @@
 use prover_node::ops::compilation::api_compile;
+use prover_node::utils::config::AppConfig;
 use prover_node::utils::errors::{ApiError, ApiResult};
-use rocket::fs::relative;
 use rocket::serde::{json::Json, Deserialize, Serialize};
+use rocket::State;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::openapi;
 use serde_json::to_writer_pretty;
@@ -29,11 +30,14 @@ pub struct CompileResponseBody {
 
 #[openapi]
 #[post("/compile", data = "<req_body>", format = "json")]
-pub fn post_compile_zokrates(req_body: Json<CompileRequestBody>) -> ApiResult<CompileResponseBody> {
+pub fn post_compile_zokrates(
+    req_body: Json<CompileRequestBody>,
+    config: &State<AppConfig>,
+) -> ApiResult<CompileResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
     let program = req_body.program.clone();
     let program_hash = format!("{:X}", Sha256::digest(&program));
-    let path = Path::new(relative!("out")).join(&program_hash);
+    let path = Path::new(&config.out_dir).join(&program_hash);
     if path.is_dir() {
         return Err(ApiError::ResourceAlreadyExists(String::from(
             "proof already exists",

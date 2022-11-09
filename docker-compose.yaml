@@ -6,7 +6,7 @@ services:
 
     container_name: "prover-node"
     environment: 
-      RUST_MIN_STACK: 8388608
+      RUST_MIN_STACK: 1000000
     command: cargo +nightly watch -x run
     build:
       dockerfile: Dockerfile.local
