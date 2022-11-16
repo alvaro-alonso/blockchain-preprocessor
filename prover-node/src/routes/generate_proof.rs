@@ -8,10 +8,9 @@ use rocket_okapi::openapi;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
-use zokrates_core::ir;
-use zokrates_core::ir::ProgEnum;
-use zokrates_core::proof_system::ark::Ark;
-use zokrates_core::proof_system::GM17;
+use zokrates_ark::Ark;
+use zokrates_ast::ir::{self, ProgEnum};
+use zokrates_proof_systems::GM17;
 
 #[derive(Deserialize, Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]

@@ -9,8 +9,8 @@ use serde_json::from_reader;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use zokrates_core::ir::ProgEnum;
-use zokrates_core::typed_absy::abi::Abi;
+use zokrates_ast::ir::ProgEnum;
+use zokrates_ast::typed::abi::Abi;
 
 #[derive(Deserialize, Serialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
