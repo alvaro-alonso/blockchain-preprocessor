@@ -6,6 +6,7 @@ use rocket_okapi::{openapi, JsonSchema};
 pub struct Task {
     service_name: String,
     version: String,
+    zokrates_version: String,
 }
 
 #[openapi]
@@ -14,7 +15,8 @@ pub fn health() -> Json<Task> {
     Json(Task {
         // TODO: add version to response
         service_name: "Zokrates Prover".to_string(),
-        version: "0.1".to_string(),
+        version: "0.1.1".to_string(),
+        zokrates_version: "8.3".to_string(),
     })
 }
 

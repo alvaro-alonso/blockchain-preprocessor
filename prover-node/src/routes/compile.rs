@@ -124,10 +124,10 @@ mod test {
     #[test]
     fn successful_compilation() {
         let req_body = r#"{
-            "program": "def main(field N) -> (bool):\n    return (N == 1)"
+            "program": "def main(field N) -> bool {\n    return (N == 1);\n}"
         }"#;
         let program_hash =
-            "6F254BEB568F82539AE89927C00A067CAFB4E068F0A879DDA199481FD7286015".to_string();
+            "FF2482276ADCD956ACB349EC598F31C33DA08B210567E5847D46D18C73855365".to_string();
         let program_abi_str = r#"{
             "inputs": [
                 {
@@ -136,11 +136,9 @@ mod test {
                     "type": "field"
                 }
             ],
-            "outputs": [
-                {
-                    "type": "bool"
-                }
-            ]
+            "output": {
+                "type": "bool"
+            }
         }"#;
         let program_abi: serde_json::Value =
             serde_json::from_str(program_abi_str).expect("correct json abi string");
