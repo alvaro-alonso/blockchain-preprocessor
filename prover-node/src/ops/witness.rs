@@ -47,7 +47,7 @@ mod test {
     use super::*;
     use std::fs::File;
     use std::io::BufReader;
-    use zokrates_core::ir::ProgEnum;
+    use zokrates_ast::ir::ProgEnum;
 
     const ABI: &str = r#"{
             "inputs": [
@@ -57,11 +57,9 @@ mod test {
                     "type": "field"
                 }
             ],
-            "outputs": [
-                {
-                    "type": "bool"
-                }
-            ]
+            "output": {
+                "type": "bool"
+            }
         }"#;
 
     #[test]
@@ -79,7 +77,7 @@ mod test {
         assert!(witness.is_ok());
 
         let (_, output) = witness.unwrap();
-        assert_eq!(output[0], true);
+        assert_eq!(output, true);
     }
 
     #[test]
@@ -97,7 +95,7 @@ mod test {
         assert!(witness.is_ok());
 
         let (witness_out, output) = witness.unwrap();
-        assert_eq!(output[0], false);
+        assert_eq!(output, false);
         println!("{}", witness_out);
     }
 

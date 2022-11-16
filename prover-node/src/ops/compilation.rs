@@ -75,7 +75,7 @@ mod test {
         //         "type": "field"
         //       }
         //     ],
-        //     "outputs": [
+        //     "output": [
         //       {
         //         "type": "bool"
         //       }
