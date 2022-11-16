@@ -1,17 +1,19 @@
-use crate::zir::result_folder::fold_statement;
-use crate::zir::result_folder::ResultFolder;
-use crate::zir::types::UBitwidth;
-use crate::zir::{
+use std::collections::HashMap;
+use std::fmt;
+use zokrates_ast::zir::types::UBitwidth;
+use zokrates_ast::zir::{
+    result_folder::*, Conditional, ConditionalExpression, ConditionalOrExpression, Expr, Id,
+    IdentifierExpression, IdentifierOrExpression, SelectExpression, SelectOrExpression,
+};
+use zokrates_ast::zir::{
     BooleanExpression, FieldElementExpression, Identifier, RuntimeError, UExpression,
     UExpressionInner, ZirExpression, ZirProgram, ZirStatement,
 };
-use std::collections::HashMap;
-use std::fmt;
 use zokrates_field::Field;
 
 type Constants<'ast, T> = HashMap<Identifier<'ast>, ZirExpression<'ast, T>>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     OutOfBounds(usize, usize),
     DivisionByZero,
@@ -124,36 +126,23 @@ impl<'ast, T: Field> ResultFolder<'ast, T> for ZirPropagator<'ast, T> {
         }
     }
 
+    fn fold_identifier_expression<E: Expr<'ast, T> + Id<'ast, T> + ResultFold<'ast, T>>(
+        &mut self,
+        _: &E::Ty,
+        id: IdentifierExpression<'ast, E>,
+    ) -> Result<IdentifierOrExpression<'ast, T, E>, Self::Error> {
+        match self.constants.get(&id.id).cloned() {
+            Some(e) => Ok(IdentifierOrExpression::Expression(E::from(e).into_inner())),
+            None => Ok(IdentifierOrExpression::Identifier(id)),
+        }
+    }
+
     fn fold_field_expression(
         &mut self,
         e: FieldElementExpression<'ast, T>,
     ) -> Result<FieldElementExpression<'ast, T>, Self::Error> {
         match e {
             FieldElementExpression::Number(n) => Ok(FieldElementExpression::Number(n)),
-            FieldElementExpression::Identifier(id) => match self.constants.get(&id) {
-                Some(ZirExpression::FieldElement(FieldElementExpression::Number(v))) => {
-                    Ok(FieldElementExpression::Number(v.clone()))
-                }
-                _ => Ok(FieldElementExpression::Identifier(id)),
-            },
-            FieldElementExpression::Select(e, box index) => {
-                let index = self.fold_uint_expression(index)?;
-                let e: Vec<FieldElementExpression<'ast, T>> = e
-                    .into_iter()
-                    .map(|e| self.fold_field_expression(e))
-                    .collect::<Result<_, _>>()?;
-
-                match index.into_inner() {
-                    UExpressionInner::Value(v) => e
-                        .get(v as usize)
-                        .cloned()
-                        .ok_or(Error::OutOfBounds(v as usize, e.len())),
-                    i => Ok(FieldElementExpression::Select(
-                        e,
-                        box i.annotate(UBitwidth::B32),
-                    )),
-                }
-            }
             FieldElementExpression::Add(box e1, box e2) => {
                 match (
                     self.fold_field_expression(e1)?,
@@ -237,22 +226,7 @@ impl<'ast, T: Field> ResultFolder<'ast, T> for ZirPropagator<'ast, T> {
                     )),
                 }
             }
-            FieldElementExpression::IfElse(box condition, box consequence, box alternative) => {
-                let condition = self.fold_boolean_expression(condition)?;
-                let consequence = self.fold_field_expression(consequence)?;
-                let alternative = self.fold_field_expression(alternative)?;
-
-                match (condition, consequence, alternative) {
-                    (_, consequence, alternative) if consequence == alternative => Ok(consequence),
-                    (BooleanExpression::Value(true), consequence, _) => Ok(consequence),
-                    (BooleanExpression::Value(false), _, alternative) => Ok(alternative),
-                    (condition, consequence, alternative) => Ok(FieldElementExpression::IfElse(
-                        box condition,
-                        box consequence,
-                        box alternative,
-                    )),
-                }
-            }
+            e => fold_field_expression(self, e),
         }
     }
 
@@ -262,27 +236,6 @@ impl<'ast, T: Field> ResultFolder<'ast, T> for ZirPropagator<'ast, T> {
     ) -> Result<BooleanExpression<'ast, T>, Error> {
         match e {
             BooleanExpression::Value(v) => Ok(BooleanExpression::Value(v)),
-            BooleanExpression::Identifier(id) => match self.constants.get(&id) {
-                Some(ZirExpression::Boolean(BooleanExpression::Value(v))) => {
-                    Ok(BooleanExpression::Value(*v))
-                }
-                _ => Ok(BooleanExpression::Identifier(id)),
-            },
-            BooleanExpression::Select(e, box index) => {
-                let index = self.fold_uint_expression(index)?;
-                let e: Vec<BooleanExpression<'ast, T>> = e
-                    .into_iter()
-                    .map(|e| self.fold_boolean_expression(e))
-                    .collect::<Result<_, _>>()?;
-
-                match index.as_inner() {
-                    UExpressionInner::Value(v) => e
-                        .get(*v as usize)
-                        .cloned()
-                        .ok_or(Error::OutOfBounds(*v as usize, e.len())),
-                    _ => Ok(BooleanExpression::Select(e, box index)),
-                }
-            }
             BooleanExpression::FieldLt(box e1, box e2) => {
                 match (
                     self.fold_field_expression(e1)?,
@@ -309,34 +262,6 @@ impl<'ast, T: Field> ResultFolder<'ast, T> for ZirPropagator<'ast, T> {
                         Ok(BooleanExpression::Value(n1 <= n2))
                     }
                     (e1, e2) => Ok(BooleanExpression::FieldLe(box e1, box e2)),
-                }
-            }
-            BooleanExpression::FieldGe(box e1, box e2) => {
-                match (
-                    self.fold_field_expression(e1)?,
-                    self.fold_field_expression(e2)?,
-                ) {
-                    (FieldElementExpression::Number(n1), FieldElementExpression::Number(n2)) => {
-                        Ok(BooleanExpression::Value(n1 >= n2))
-                    }
-                    (e1, e2) => Ok(BooleanExpression::FieldGe(box e1, box e2)),
-                }
-            }
-            BooleanExpression::FieldGt(box e1, box e2) => {
-                match (
-                    self.fold_field_expression(e1)?,
-                    self.fold_field_expression(e2)?,
-                ) {
-                    (FieldElementExpression::Number(n1), FieldElementExpression::Number(n2)) => {
-                        Ok(BooleanExpression::Value(n1 > n2))
-                    }
-                    (_, FieldElementExpression::Number(c)) if c == T::max_value() => {
-                        Ok(BooleanExpression::Value(false))
-                    }
-                    (FieldElementExpression::Number(c), _) if c == T::zero() => {
-                        Ok(BooleanExpression::Value(false))
-                    }
-                    (e1, e2) => Ok(BooleanExpression::FieldGt(box e1, box e2)),
                 }
             }
             BooleanExpression::FieldEq(box e1, box e2) => {
@@ -376,28 +301,6 @@ impl<'ast, T: Field> ResultFolder<'ast, T> for ZirPropagator<'ast, T> {
                         Ok(BooleanExpression::Value(v1 <= v2))
                     }
                     _ => Ok(BooleanExpression::UintLe(box e1, box e2)),
-                }
-            }
-            BooleanExpression::UintGe(box e1, box e2) => {
-                let e1 = self.fold_uint_expression(e1)?;
-                let e2 = self.fold_uint_expression(e2)?;
-
-                match (e1.as_inner(), e2.as_inner()) {
-                    (UExpressionInner::Value(v1), UExpressionInner::Value(v2)) => {
-                        Ok(BooleanExpression::Value(v1 >= v2))
-                    }
-                    _ => Ok(BooleanExpression::UintGe(box e1, box e2)),
-                }
-            }
-            BooleanExpression::UintGt(box e1, box e2) => {
-                let e1 = self.fold_uint_expression(e1)?;
-                let e2 = self.fold_uint_expression(e2)?;
-
-                match (e1.as_inner(), e2.as_inner()) {
-                    (UExpressionInner::Value(v1), UExpressionInner::Value(v2)) => {
-                        Ok(BooleanExpression::Value(v1 > v2))
-                    }
-                    _ => Ok(BooleanExpression::UintGt(box e1, box e2)),
                 }
             }
             BooleanExpression::UintEq(box e1, box e2) => {
@@ -469,22 +372,33 @@ impl<'ast, T: Field> ResultFolder<'ast, T> for ZirPropagator<'ast, T> {
                 BooleanExpression::Value(v) => Ok(BooleanExpression::Value(!v)),
                 e => Ok(BooleanExpression::Not(box e)),
             },
-            BooleanExpression::IfElse(box condition, box consequence, box alternative) => {
-                let condition = self.fold_boolean_expression(condition)?;
-                let consequence = self.fold_boolean_expression(consequence)?;
-                let alternative = self.fold_boolean_expression(alternative)?;
+            e => fold_boolean_expression(self, e),
+        }
+    }
 
-                match (condition, consequence, alternative) {
-                    (_, consequence, alternative) if consequence == alternative => Ok(consequence),
-                    (BooleanExpression::Value(true), consequence, _) => Ok(consequence),
-                    (BooleanExpression::Value(false), _, alternative) => Ok(alternative),
-                    (condition, consequence, alternative) => Ok(BooleanExpression::IfElse(
-                        box condition,
-                        box consequence,
-                        box alternative,
-                    )),
-                }
-            }
+    fn fold_select_expression<
+        E: Clone + Expr<'ast, T> + ResultFold<'ast, T> + zokrates_ast::zir::Select<'ast, T>,
+    >(
+        &mut self,
+        _: &E::Ty,
+        e: SelectExpression<'ast, T, E>,
+    ) -> Result<zokrates_ast::zir::SelectOrExpression<'ast, T, E>, Self::Error> {
+        let index = self.fold_uint_expression(*e.index)?;
+        let array = e
+            .array
+            .into_iter()
+            .map(|e| e.fold(self))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        match index.as_inner() {
+            UExpressionInner::Value(v) => array
+                .get(*v as usize)
+                .cloned()
+                .ok_or(Error::OutOfBounds(*v as usize, array.len()))
+                .map(|e| SelectOrExpression::Expression(e.into_inner())),
+            _ => Ok(SelectOrExpression::Expression(
+                E::select(array, index).into_inner(),
+            )),
         }
     }
 
@@ -495,26 +409,6 @@ impl<'ast, T: Field> ResultFolder<'ast, T> for ZirPropagator<'ast, T> {
     ) -> Result<UExpressionInner<'ast, T>, Self::Error> {
         match e {
             UExpressionInner::Value(v) => Ok(UExpressionInner::Value(v)),
-            UExpressionInner::Identifier(id) => match self.constants.get(&id) {
-                Some(ZirExpression::Uint(e)) => Ok(e.as_inner().clone()),
-                _ => Ok(UExpressionInner::Identifier(id)),
-            },
-            UExpressionInner::Select(e, box index) => {
-                let index = self.fold_uint_expression(index)?;
-                let e: Vec<UExpression<'ast, T>> = e
-                    .into_iter()
-                    .map(|e| self.fold_uint_expression(e))
-                    .collect::<Result<_, _>>()?;
-
-                match index.into_inner() {
-                    UExpressionInner::Value(v) => e
-                        .get(v as usize)
-                        .cloned()
-                        .ok_or(Error::OutOfBounds(v as usize, e.len()))
-                        .map(|e| e.into_inner()),
-                    i => Ok(UExpressionInner::Select(e, box i.annotate(UBitwidth::B32))),
-                }
-            }
             UExpressionInner::Add(box e1, box e2) => {
                 let e1 = self.fold_uint_expression(e1)?;
                 let e2 = self.fold_uint_expression(e2)?;
@@ -681,22 +575,34 @@ impl<'ast, T: Field> ResultFolder<'ast, T> for ZirPropagator<'ast, T> {
                     e => Ok(UExpressionInner::Not(box e.annotate(bitwidth))),
                 }
             }
-            UExpressionInner::IfElse(box condition, box consequence, box alternative) => {
-                let condition = self.fold_boolean_expression(condition)?;
-                let consequence = self.fold_uint_expression(consequence)?.into_inner();
-                let alternative = self.fold_uint_expression(alternative)?.into_inner();
+            e => fold_uint_expression_inner(self, bitwidth, e),
+        }
+    }
 
-                match (condition, consequence, alternative) {
-                    (_, consequence, alternative) if consequence == alternative => Ok(consequence),
-                    (BooleanExpression::Value(true), consequence, _) => Ok(consequence),
-                    (BooleanExpression::Value(false), _, alternative) => Ok(alternative),
-                    (condition, consequence, alternative) => Ok(UExpressionInner::IfElse(
-                        box condition,
-                        box consequence.annotate(bitwidth),
-                        box alternative.annotate(bitwidth),
-                    )),
-                }
-            }
+    fn fold_conditional_expression<
+        E: Expr<'ast, T> + ResultFold<'ast, T> + Conditional<'ast, T>,
+    >(
+        &mut self,
+        _: &E::Ty,
+        e: ConditionalExpression<'ast, T, E>,
+    ) -> Result<ConditionalOrExpression<'ast, T, E>, Self::Error> {
+        let condition = self.fold_boolean_expression(*e.condition)?;
+        let consequence = e.consequence.fold(self)?;
+        let alternative = e.alternative.fold(self)?;
+
+        match (condition, consequence, alternative) {
+            (_, consequence, alternative) if consequence == alternative => Ok(
+                ConditionalOrExpression::Expression(consequence.into_inner()),
+            ),
+            (BooleanExpression::Value(true), consequence, _) => Ok(
+                ConditionalOrExpression::Expression(consequence.into_inner()),
+            ),
+            (BooleanExpression::Value(false), _, alternative) => Ok(
+                ConditionalOrExpression::Expression(alternative.into_inner()),
+            ),
+            (condition, consequence, alternative) => Ok(ConditionalOrExpression::Conditional(
+                ConditionalExpression::new(condition, consequence, alternative),
+            )),
         }
     }
 }
@@ -704,14 +610,8 @@ impl<'ast, T: Field> ResultFolder<'ast, T> for ZirPropagator<'ast, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::zir::RuntimeError;
+    use zokrates_ast::zir::{Id, RuntimeError};
     use zokrates_field::Bn128Field;
-
-    impl RuntimeError {
-        pub fn mock() -> Self {
-            RuntimeError::SourceAssertion(String::default())
-        }
-    }
 
     #[test]
     fn propagation() {
@@ -719,8 +619,8 @@ mod tests {
         let statements = vec![ZirStatement::Assertion(
             BooleanExpression::And(
                 box BooleanExpression::FieldEq(
-                    box FieldElementExpression::Identifier("x".into()),
-                    box FieldElementExpression::Identifier("y".into()),
+                    box FieldElementExpression::identifier("x".into()),
+                    box FieldElementExpression::identifier("y".into()),
                 ),
                 box BooleanExpression::FieldEq(
                     box FieldElementExpression::Number(Bn128Field::from(1)),
@@ -744,8 +644,8 @@ mod tests {
             statements,
             vec![ZirStatement::Assertion(
                 BooleanExpression::FieldEq(
-                    box FieldElementExpression::Identifier("x".into()),
-                    box FieldElementExpression::Identifier("y".into()),
+                    box FieldElementExpression::identifier("x".into()),
+                    box FieldElementExpression::identifier("y".into()),
                 ),
                 RuntimeError::mock()
             )]
@@ -754,6 +654,9 @@ mod tests {
 
     #[cfg(test)]
     mod field {
+        use zokrates_ast::zir::Conditional;
+        use zokrates_ast::zir::Select;
+
         use super::*;
 
         #[test]
@@ -761,23 +664,23 @@ mod tests {
             let mut propagator = ZirPropagator::default();
 
             assert_eq!(
-                propagator.fold_field_expression(FieldElementExpression::Select(
+                propagator.fold_field_expression(FieldElementExpression::select(
                     vec![
                         FieldElementExpression::Number(Bn128Field::from(1)),
                         FieldElementExpression::Number(Bn128Field::from(2)),
                     ],
-                    box UExpressionInner::Value(1).annotate(UBitwidth::B32),
+                    UExpressionInner::Value(1).annotate(UBitwidth::B32),
                 )),
                 Ok(FieldElementExpression::Number(Bn128Field::from(2)))
             );
 
             assert_eq!(
-                propagator.fold_field_expression(FieldElementExpression::Select(
+                propagator.fold_field_expression(FieldElementExpression::select(
                     vec![
                         FieldElementExpression::Number(Bn128Field::from(1)),
                         FieldElementExpression::Number(Bn128Field::from(2)),
                     ],
-                    box UExpressionInner::Value(3).annotate(UBitwidth::B32),
+                    UExpressionInner::Value(3).annotate(UBitwidth::B32),
                 )),
                 Err(Error::OutOfBounds(3, 2))
             );
@@ -798,10 +701,10 @@ mod tests {
             // a + 0 = a
             assert_eq!(
                 propagator.fold_field_expression(FieldElementExpression::Add(
-                    box FieldElementExpression::Identifier("a".into()),
+                    box FieldElementExpression::identifier("a".into()),
                     box FieldElementExpression::Number(Bn128Field::from(0)),
                 )),
-                Ok(FieldElementExpression::Identifier("a".into()))
+                Ok(FieldElementExpression::identifier("a".into()))
             );
         }
 
@@ -820,10 +723,10 @@ mod tests {
             // a - 0 = a
             assert_eq!(
                 propagator.fold_field_expression(FieldElementExpression::Sub(
-                    box FieldElementExpression::Identifier("a".into()),
+                    box FieldElementExpression::identifier("a".into()),
                     box FieldElementExpression::Number(Bn128Field::from(0)),
                 )),
-                Ok(FieldElementExpression::Identifier("a".into()))
+                Ok(FieldElementExpression::identifier("a".into()))
             );
         }
 
@@ -842,7 +745,7 @@ mod tests {
             // a * 0 = 0
             assert_eq!(
                 propagator.fold_field_expression(FieldElementExpression::Mult(
-                    box FieldElementExpression::Identifier("a".into()),
+                    box FieldElementExpression::identifier("a".into()),
                     box FieldElementExpression::Number(Bn128Field::from(0)),
                 )),
                 Ok(FieldElementExpression::Number(Bn128Field::from(0)))
@@ -851,10 +754,10 @@ mod tests {
             // a * 1 = a
             assert_eq!(
                 propagator.fold_field_expression(FieldElementExpression::Mult(
-                    box FieldElementExpression::Identifier("a".into()),
+                    box FieldElementExpression::identifier("a".into()),
                     box FieldElementExpression::Number(Bn128Field::from(1)),
                 )),
-                Ok(FieldElementExpression::Identifier("a".into()))
+                Ok(FieldElementExpression::identifier("a".into()))
             );
         }
 
@@ -872,15 +775,15 @@ mod tests {
 
             assert_eq!(
                 propagator.fold_field_expression(FieldElementExpression::Div(
-                    box FieldElementExpression::Identifier("a".into()),
+                    box FieldElementExpression::identifier("a".into()),
                     box FieldElementExpression::Number(Bn128Field::from(1)),
                 )),
-                Ok(FieldElementExpression::Identifier("a".into()))
+                Ok(FieldElementExpression::identifier("a".into()))
             );
 
             assert_eq!(
                 propagator.fold_field_expression(FieldElementExpression::Div(
-                    box FieldElementExpression::Identifier("a".into()),
+                    box FieldElementExpression::identifier("a".into()),
                     box FieldElementExpression::Number(Bn128Field::from(0)),
                 )),
                 Err(Error::DivisionByZero)
@@ -902,7 +805,7 @@ mod tests {
             // a ** 0 = 1
             assert_eq!(
                 propagator.fold_field_expression(FieldElementExpression::Pow(
-                    box FieldElementExpression::Identifier("a".into()),
+                    box FieldElementExpression::identifier("a".into()),
                     box UExpressionInner::Value(0).annotate(UBitwidth::B32),
                 )),
                 Ok(FieldElementExpression::Number(Bn128Field::from(1)))
@@ -911,10 +814,10 @@ mod tests {
             // a ** 1 = a
             assert_eq!(
                 propagator.fold_field_expression(FieldElementExpression::Pow(
-                    box FieldElementExpression::Identifier("a".into()),
+                    box FieldElementExpression::identifier("a".into()),
                     box UExpressionInner::Value(1).annotate(UBitwidth::B32),
                 )),
-                Ok(FieldElementExpression::Identifier("a".into()))
+                Ok(FieldElementExpression::identifier("a".into()))
             );
         }
 
@@ -923,28 +826,28 @@ mod tests {
             let mut propagator = ZirPropagator::default();
 
             assert_eq!(
-                propagator.fold_field_expression(FieldElementExpression::IfElse(
-                    box BooleanExpression::Value(true),
-                    box FieldElementExpression::Number(Bn128Field::from(1)),
-                    box FieldElementExpression::Number(Bn128Field::from(2)),
+                propagator.fold_field_expression(FieldElementExpression::conditional(
+                    BooleanExpression::Value(true),
+                    FieldElementExpression::Number(Bn128Field::from(1)),
+                    FieldElementExpression::Number(Bn128Field::from(2)),
                 )),
                 Ok(FieldElementExpression::Number(Bn128Field::from(1)))
             );
 
             assert_eq!(
-                propagator.fold_field_expression(FieldElementExpression::IfElse(
-                    box BooleanExpression::Value(false),
-                    box FieldElementExpression::Number(Bn128Field::from(1)),
-                    box FieldElementExpression::Number(Bn128Field::from(2)),
+                propagator.fold_field_expression(FieldElementExpression::conditional(
+                    BooleanExpression::Value(false),
+                    FieldElementExpression::Number(Bn128Field::from(1)),
+                    FieldElementExpression::Number(Bn128Field::from(2)),
                 )),
                 Ok(FieldElementExpression::Number(Bn128Field::from(2)))
             );
 
             assert_eq!(
-                propagator.fold_field_expression(FieldElementExpression::IfElse(
-                    box BooleanExpression::Identifier("a".into()),
-                    box FieldElementExpression::Number(Bn128Field::from(2)),
-                    box FieldElementExpression::Number(Bn128Field::from(2)),
+                propagator.fold_field_expression(FieldElementExpression::conditional(
+                    BooleanExpression::identifier("a".into()),
+                    FieldElementExpression::Number(Bn128Field::from(2)),
+                    FieldElementExpression::Number(Bn128Field::from(2)),
                 )),
                 Ok(FieldElementExpression::Number(Bn128Field::from(2)))
             );
@@ -953,6 +856,9 @@ mod tests {
 
     #[cfg(test)]
     mod bool {
+        use zokrates_ast::zir::Conditional;
+        use zokrates_ast::zir::Select;
+
         use super::*;
 
         #[test]
@@ -960,23 +866,23 @@ mod tests {
             let mut propagator = ZirPropagator::<Bn128Field>::default();
 
             assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::Select(
+                propagator.fold_boolean_expression(BooleanExpression::select(
                     vec![
                         BooleanExpression::Value(false),
                         BooleanExpression::Value(true),
                     ],
-                    box UExpressionInner::Value(1).annotate(UBitwidth::B32),
+                    UExpressionInner::Value(1).annotate(UBitwidth::B32),
                 )),
                 Ok(BooleanExpression::Value(true))
             );
 
             assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::Select(
+                propagator.fold_boolean_expression(BooleanExpression::select(
                     vec![
                         BooleanExpression::Value(false),
                         BooleanExpression::Value(true),
                     ],
-                    box UExpressionInner::Value(3).annotate(UBitwidth::B32),
+                    UExpressionInner::Value(3).annotate(UBitwidth::B32),
                 )),
                 Err(Error::OutOfBounds(3, 2))
             );
@@ -1004,7 +910,7 @@ mod tests {
 
             assert_eq!(
                 propagator.fold_boolean_expression(BooleanExpression::FieldLt(
-                    box FieldElementExpression::Identifier("a".into()),
+                    box FieldElementExpression::identifier("a".into()),
                     box FieldElementExpression::Number(Bn128Field::from(0)),
                 )),
                 Ok(BooleanExpression::Value(false))
@@ -1013,7 +919,7 @@ mod tests {
             assert_eq!(
                 propagator.fold_boolean_expression(BooleanExpression::FieldLt(
                     box FieldElementExpression::Number(Bn128Field::max_value()),
-                    box FieldElementExpression::Identifier("a".into()),
+                    box FieldElementExpression::identifier("a".into()),
                 )),
                 Ok(BooleanExpression::Value(false))
             );
@@ -1037,64 +943,6 @@ mod tests {
                     box FieldElementExpression::Number(Bn128Field::from(3)),
                 )),
                 Ok(BooleanExpression::Value(true))
-            );
-        }
-
-        #[test]
-        fn field_ge() {
-            let mut propagator = ZirPropagator::default();
-
-            assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::FieldGe(
-                    box FieldElementExpression::Number(Bn128Field::from(3)),
-                    box FieldElementExpression::Number(Bn128Field::from(2)),
-                )),
-                Ok(BooleanExpression::Value(true))
-            );
-
-            assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::FieldGe(
-                    box FieldElementExpression::Number(Bn128Field::from(3)),
-                    box FieldElementExpression::Number(Bn128Field::from(3)),
-                )),
-                Ok(BooleanExpression::Value(true))
-            );
-        }
-
-        #[test]
-        fn field_gt() {
-            let mut propagator = ZirPropagator::default();
-
-            assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::FieldGt(
-                    box FieldElementExpression::Number(Bn128Field::from(3)),
-                    box FieldElementExpression::Number(Bn128Field::from(2)),
-                )),
-                Ok(BooleanExpression::Value(true))
-            );
-
-            assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::FieldGt(
-                    box FieldElementExpression::Number(Bn128Field::from(3)),
-                    box FieldElementExpression::Number(Bn128Field::from(3)),
-                )),
-                Ok(BooleanExpression::Value(false))
-            );
-
-            assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::FieldGt(
-                    box FieldElementExpression::Number(Bn128Field::from(0)),
-                    box FieldElementExpression::Identifier("a".into()),
-                )),
-                Ok(BooleanExpression::Value(false))
-            );
-
-            assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::FieldGt(
-                    box FieldElementExpression::Identifier("a".into()),
-                    box FieldElementExpression::Number(Bn128Field::max_value()),
-                )),
-                Ok(BooleanExpression::Value(false))
             );
         }
 
@@ -1162,48 +1010,6 @@ mod tests {
         }
 
         #[test]
-        fn uint_ge() {
-            let mut propagator = ZirPropagator::<Bn128Field>::default();
-
-            assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::UintGe(
-                    box UExpressionInner::Value(3).annotate(UBitwidth::B32),
-                    box UExpressionInner::Value(2).annotate(UBitwidth::B32),
-                )),
-                Ok(BooleanExpression::Value(true))
-            );
-
-            assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::UintGe(
-                    box UExpressionInner::Value(3).annotate(UBitwidth::B32),
-                    box UExpressionInner::Value(3).annotate(UBitwidth::B32),
-                )),
-                Ok(BooleanExpression::Value(true))
-            );
-        }
-
-        #[test]
-        fn uint_gt() {
-            let mut propagator = ZirPropagator::<Bn128Field>::default();
-
-            assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::UintGt(
-                    box UExpressionInner::Value(3).annotate(UBitwidth::B32),
-                    box UExpressionInner::Value(2).annotate(UBitwidth::B32),
-                )),
-                Ok(BooleanExpression::Value(true))
-            );
-
-            assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::UintGt(
-                    box UExpressionInner::Value(3).annotate(UBitwidth::B32),
-                    box UExpressionInner::Value(3).annotate(UBitwidth::B32),
-                )),
-                Ok(BooleanExpression::Value(false))
-            );
-        }
-
-        #[test]
         fn uint_eq() {
             let mut propagator = ZirPropagator::<Bn128Field>::default();
 
@@ -1267,15 +1073,15 @@ mod tests {
 
             assert_eq!(
                 propagator.fold_boolean_expression(BooleanExpression::And(
-                    box BooleanExpression::Identifier("a".into()),
+                    box BooleanExpression::identifier("a".into()),
                     box BooleanExpression::Value(true),
                 )),
-                Ok(BooleanExpression::Identifier("a".into()))
+                Ok(BooleanExpression::identifier("a".into()))
             );
 
             assert_eq!(
                 propagator.fold_boolean_expression(BooleanExpression::And(
-                    box BooleanExpression::Identifier("a".into()),
+                    box BooleanExpression::identifier("a".into()),
                     box BooleanExpression::Value(false),
                 )),
                 Ok(BooleanExpression::Value(false))
@@ -1327,28 +1133,28 @@ mod tests {
             let mut propagator = ZirPropagator::<Bn128Field>::default();
 
             assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::IfElse(
-                    box BooleanExpression::Value(true),
-                    box BooleanExpression::Value(true),
-                    box BooleanExpression::Value(false)
+                propagator.fold_boolean_expression(BooleanExpression::conditional(
+                    BooleanExpression::Value(true),
+                    BooleanExpression::Value(true),
+                    BooleanExpression::Value(false)
                 )),
                 Ok(BooleanExpression::Value(true))
             );
 
             assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::IfElse(
-                    box BooleanExpression::Value(false),
-                    box BooleanExpression::Value(true),
-                    box BooleanExpression::Value(false)
+                propagator.fold_boolean_expression(BooleanExpression::conditional(
+                    BooleanExpression::Value(false),
+                    BooleanExpression::Value(true),
+                    BooleanExpression::Value(false)
                 )),
                 Ok(BooleanExpression::Value(false))
             );
 
             assert_eq!(
-                propagator.fold_boolean_expression(BooleanExpression::IfElse(
-                    box BooleanExpression::Identifier("a".into()),
-                    box BooleanExpression::Value(true),
-                    box BooleanExpression::Value(true)
+                propagator.fold_boolean_expression(BooleanExpression::conditional(
+                    BooleanExpression::identifier("a".into()),
+                    BooleanExpression::Value(true),
+                    BooleanExpression::Value(true)
                 )),
                 Ok(BooleanExpression::Value(true))
             );
@@ -1357,6 +1163,8 @@ mod tests {
 
     #[cfg(test)]
     mod uint {
+        use zokrates_ast::zir::Conditional;
+
         use super::*;
 
         #[test]
@@ -1366,13 +1174,14 @@ mod tests {
             assert_eq!(
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
-                    UExpressionInner::Select(
+                    UExpression::select(
                         vec![
                             UExpressionInner::Value(1).annotate(UBitwidth::B32),
                             UExpressionInner::Value(2).annotate(UBitwidth::B32),
                         ],
-                        box UExpressionInner::Value(1).annotate(UBitwidth::B32),
+                        UExpressionInner::Value(1).annotate(UBitwidth::B32),
                     )
+                    .into_inner()
                 ),
                 Ok(UExpressionInner::Value(2))
             );
@@ -1380,13 +1189,14 @@ mod tests {
             assert_eq!(
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
-                    UExpressionInner::Select(
+                    UExpression::select(
                         vec![
                             UExpressionInner::Value(1).annotate(UBitwidth::B32),
                             UExpressionInner::Value(2).annotate(UBitwidth::B32),
                         ],
-                        box UExpressionInner::Value(3).annotate(UBitwidth::B32),
+                        UExpressionInner::Value(3).annotate(UBitwidth::B32),
                     )
+                    .into_inner()
                 ),
                 Err(Error::OutOfBounds(3, 2))
             );
@@ -1412,11 +1222,11 @@ mod tests {
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
                     UExpressionInner::Add(
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
                         box UExpressionInner::Value(0).annotate(UBitwidth::B32),
                     )
                 ),
-                Ok(UExpressionInner::Identifier("a".into()))
+                Ok(UExpression::identifier("a".into()))
             );
         }
 
@@ -1440,11 +1250,11 @@ mod tests {
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
                     UExpressionInner::Sub(
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
                         box UExpressionInner::Value(0).annotate(UBitwidth::B32),
                     )
                 ),
-                Ok(UExpressionInner::Identifier("a".into()))
+                Ok(UExpression::identifier("a".into()))
             );
         }
 
@@ -1468,11 +1278,11 @@ mod tests {
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
                     UExpressionInner::Mult(
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
                         box UExpressionInner::Value(1).annotate(UBitwidth::B32),
                     )
                 ),
-                Ok(UExpressionInner::Identifier("a".into()))
+                Ok(UExpression::identifier("a".into()))
             );
 
             // a * 0 = 0
@@ -1480,7 +1290,7 @@ mod tests {
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
                     UExpressionInner::Mult(
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
                         box UExpressionInner::Value(0).annotate(UBitwidth::B32),
                     )
                 ),
@@ -1507,18 +1317,18 @@ mod tests {
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
                     UExpressionInner::Div(
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
                         box UExpressionInner::Value(1).annotate(UBitwidth::B32),
                     )
                 ),
-                Ok(UExpressionInner::Identifier("a".into()))
+                Ok(UExpression::identifier("a".into()))
             );
 
             assert_eq!(
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
                     UExpressionInner::Div(
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
                         box UExpressionInner::Value(0).annotate(UBitwidth::B32),
                     )
                 ),
@@ -1572,8 +1382,8 @@ mod tests {
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
                     UExpressionInner::Xor(
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
                     )
                 ),
                 Ok(UExpressionInner::Value(0))
@@ -1599,7 +1409,7 @@ mod tests {
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
                     UExpressionInner::And(
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
                         box UExpressionInner::Value(0).annotate(UBitwidth::B32),
                     )
                 ),
@@ -1610,11 +1420,11 @@ mod tests {
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
                     UExpressionInner::And(
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
                         box UExpressionInner::Value(u32::MAX as u128).annotate(UBitwidth::B32),
                     )
                 ),
-                Ok(UExpressionInner::Identifier("a".into()))
+                Ok(UExpression::identifier("a".into()))
             );
         }
 
@@ -1637,18 +1447,18 @@ mod tests {
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
                     UExpressionInner::Or(
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
                         box UExpressionInner::Value(0).annotate(UBitwidth::B32),
                     )
                 ),
-                Ok(UExpressionInner::Identifier("a".into()))
+                Ok(UExpression::identifier("a".into()))
             );
 
             assert_eq!(
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
                     UExpressionInner::Or(
-                        box UExpressionInner::Identifier("a".into()).annotate(UBitwidth::B32),
+                        box UExpression::identifier("a".into()).annotate(UBitwidth::B32),
                         box UExpressionInner::Value(u32::MAX as u128).annotate(UBitwidth::B32),
                     )
                 ),
@@ -1752,11 +1562,12 @@ mod tests {
             assert_eq!(
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
-                    UExpressionInner::IfElse(
-                        box BooleanExpression::Value(true),
-                        box UExpressionInner::Value(1).annotate(UBitwidth::B32),
-                        box UExpressionInner::Value(2).annotate(UBitwidth::B32),
+                    UExpression::conditional(
+                        BooleanExpression::Value(true),
+                        UExpressionInner::Value(1).annotate(UBitwidth::B32),
+                        UExpressionInner::Value(2).annotate(UBitwidth::B32),
                     )
+                    .into_inner()
                 ),
                 Ok(UExpressionInner::Value(1))
             );
@@ -1764,11 +1575,12 @@ mod tests {
             assert_eq!(
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
-                    UExpressionInner::IfElse(
-                        box BooleanExpression::Value(false),
-                        box UExpressionInner::Value(1).annotate(UBitwidth::B32),
-                        box UExpressionInner::Value(2).annotate(UBitwidth::B32),
+                    UExpression::conditional(
+                        BooleanExpression::Value(false),
+                        UExpressionInner::Value(1).annotate(UBitwidth::B32),
+                        UExpressionInner::Value(2).annotate(UBitwidth::B32),
                     )
+                    .into_inner()
                 ),
                 Ok(UExpressionInner::Value(2))
             );
@@ -1776,11 +1588,12 @@ mod tests {
             assert_eq!(
                 propagator.fold_uint_expression_inner(
                     UBitwidth::B32,
-                    UExpressionInner::IfElse(
-                        box BooleanExpression::Identifier("a".into()),
-                        box UExpressionInner::Value(2).annotate(UBitwidth::B32),
-                        box UExpressionInner::Value(2).annotate(UBitwidth::B32),
+                    UExpression::conditional(
+                        BooleanExpression::identifier("a".into()),
+                        UExpressionInner::Value(2).annotate(UBitwidth::B32),
+                        UExpressionInner::Value(2).annotate(UBitwidth::B32),
                     )
+                    .into_inner()
                 ),
                 Ok(UExpressionInner::Value(2))
             );

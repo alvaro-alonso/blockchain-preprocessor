@@ -7,18 +7,18 @@
 //! @author Thibaut Schaeffer <thibaut@schaeff.fr>
 //! @date 2018
 
-use crate::embed::FlatEmbed;
-use crate::typed_absy::result_folder::*;
-use crate::typed_absy::types::Type;
-use crate::typed_absy::*;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
+use zokrates_ast::common::FlatEmbed;
+use zokrates_ast::typed::result_folder::*;
+use zokrates_ast::typed::types::Type;
+use zokrates_ast::typed::*;
 use zokrates_field::Field;
 
 pub type Constants<'ast, T> = HashMap<Identifier<'ast>, TypedExpression<'ast, T>>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     Type(String),
     AssertionFailed(String),
@@ -221,9 +221,9 @@ impl<'ast, 'a, T: Field> ResultFolder<'ast, T> for Propagator<'ast, 'a, T> {
     ) -> Result<Vec<TypedStatement<'ast, T>>, Error> {
         match s {
             // propagation to the defined variable if rhs is a constant
-            TypedStatement::Definition(assignee, expr) => {
-                let expr = self.fold_expression(expr)?;
+            TypedStatement::Definition(assignee, DefinitionRhs::Expression(expr)) => {
                 let assignee = self.fold_assignee(assignee)?;
+                let expr = self.fold_expression(expr)?;
 
                 if let (Ok(a), Ok(e)) = (
                     ConcreteType::try_from(assignee.get_type()),
@@ -255,10 +255,10 @@ impl<'ast, 'a, T: Field> ResultFolder<'ast, T> for Propagator<'ast, 'a, T> {
                                 // invalidate the cache for this identifier, and define the latest
                                 // version of the constant in the program, if any
                                 Some(c) => Ok(vec![
-                                    TypedStatement::Definition(v.clone().into(), c),
-                                    TypedStatement::Definition(assignee, expr),
+                                    TypedStatement::Definition(v.clone().into(), c.into()),
+                                    TypedStatement::Definition(assignee, expr.into()),
                                 ]),
-                                None => Ok(vec![TypedStatement::Definition(assignee, expr)]),
+                                None => Ok(vec![TypedStatement::Definition(assignee, expr.into())]),
                             },
                         },
                     }
@@ -271,10 +271,10 @@ impl<'ast, 'a, T: Field> ResultFolder<'ast, T> for Propagator<'ast, 'a, T> {
 
                     match self.constants.remove(&v.id) {
                         Some(c) => Ok(vec![
-                            TypedStatement::Definition(v.clone().into(), c),
-                            TypedStatement::Definition(assignee, expr),
+                            TypedStatement::Definition(v.clone().into(), c.into()),
+                            TypedStatement::Definition(assignee, expr.into()),
                         ]),
-                        None => Ok(vec![TypedStatement::Definition(assignee, expr)]),
+                        None => Ok(vec![TypedStatement::Definition(assignee, expr.into())]),
                     }
                 }
             }
@@ -285,362 +285,250 @@ impl<'ast, 'a, T: Field> ResultFolder<'ast, T> for Propagator<'ast, 'a, T> {
 
                 Ok(vec![TypedStatement::For(v, from, to, statements)])
             }
-            TypedStatement::MultipleDefinition(assignees, expression_list) => {
-                let assignees: Vec<TypedAssignee<'ast, T>> = assignees
-                    .into_iter()
-                    .map(|a| self.fold_assignee(a))
-                    .collect::<Result<_, _>>()?;
-                let expression_list = self.fold_expression_list(expression_list)?;
+            TypedStatement::Definition(assignee, DefinitionRhs::EmbedCall(embed_call)) => {
+                let assignee = self.fold_assignee(assignee)?;
+                let embed_call = self.fold_embed_call(embed_call)?;
 
-                let types = Types {
-                    inner: expression_list
-                        .types
-                        .clone()
-                        .inner
-                        .into_iter()
-                        .map(|t| self.fold_type(t))
-                        .collect::<Result<_, _>>()?,
-                };
+                fn process_u_from_bits<'ast, T: Field>(
+                    arguments: &[TypedExpression<'ast, T>],
+                    bitwidth: UBitwidth,
+                ) -> TypedExpression<'ast, T> {
+                    assert_eq!(arguments.len(), 1);
 
-                let statements = match expression_list.into_inner() {
-                    TypedExpressionListInner::EmbedCall(embed, generics, arguments) => {
-                        let arguments: Vec<_> = arguments
-                            .into_iter()
-                            .map(|a| self.fold_expression(a))
-                            .collect::<Result<_, _>>()?;
+                    let argument = arguments.last().cloned().unwrap();
+                    let argument = argument.into_canonical_constant();
 
-                        fn process_u_from_bits<'ast, T: Field>(
-                            variables: Vec<TypedAssignee<'ast, T>>,
-                            mut arguments: Vec<TypedExpression<'ast, T>>,
-                            bitwidth: UBitwidth,
-                        ) -> TypedExpression<'ast, T> {
-                            assert_eq!(variables.len(), 1);
-                            assert_eq!(arguments.len(), 1);
-
-                            let argument = arguments.pop().unwrap();
-
-                            let argument = argument.into_canonical_constant();
-
-                            match ArrayExpression::try_from(argument)
-                                .unwrap()
-                                .into_inner()
-                            {
-                                ArrayExpressionInner::Value(v) =>
-                                    UExpressionInner::Value(
-                                        v.into_iter()
-                                            .map(|v| match v {
-                                                TypedExpressionOrSpread::Expression(
-                                                    TypedExpression::Boolean(
-                                                        BooleanExpression::Value(v),
-                                                    ),
-                                                ) => v,
-                                                _ => unreachable!("Should be a constant boolean expression. Spreads are not expected here, as in their presence the argument isn't constant"),
-                                            })
-                                            .enumerate()
-                                            .fold(0, |acc, (i, v)| {
-                                                if v {
-                                                    acc + 2u128.pow(
-                                                        (bitwidth.to_usize() - i - 1)
-                                                            .try_into()
-                                                            .unwrap(),
-                                                    )
-                                                } else {
-                                                    acc
-                                                }
-                                            }),
+                    match ArrayExpression::try_from(argument)
+                .unwrap()
+                .into_inner()
+            {
+                ArrayExpressionInner::Value(v) =>
+                    UExpressionInner::Value(
+                        v.into_iter()
+                            .map(|v| match v {
+                                TypedExpressionOrSpread::Expression(
+                                    TypedExpression::Boolean(
+                                        BooleanExpression::Value(v),
+                                    ),
+                                ) => v,
+                                _ => unreachable!("Should be a constant boolean expression. Spreads are not expected here, as in their presence the argument isn't constant"),
+                            })
+                            .enumerate()
+                            .fold(0, |acc, (i, v)| {
+                                if v {
+                                    acc + 2u128.pow(
+                                        (bitwidth.to_usize() - i - 1)
+                                            .try_into()
+                                            .unwrap(),
                                     )
-                                    .annotate(bitwidth)
+                                } else {
+                                    acc
+                                }
+                            }),
+                    )
+                        .annotate(bitwidth)
+                        .into(),
+                _ => unreachable!("should be an array value"),
+            }
+                }
+
+                fn process_u_to_bits<'ast, T: Field>(
+                    arguments: &[TypedExpression<'ast, T>],
+                    bitwidth: UBitwidth,
+                ) -> TypedExpression<'ast, T> {
+                    assert_eq!(arguments.len(), 1);
+
+                    match UExpression::try_from(arguments[0].clone())
+                        .unwrap()
+                        .into_inner()
+                    {
+                        UExpressionInner::Value(v) => {
+                            let mut num = v;
+                            let mut res = vec![];
+
+                            for i in (0..bitwidth as u32).rev() {
+                                if 2u128.pow(i) <= num {
+                                    num -= 2u128.pow(i);
+                                    res.push(true);
+                                } else {
+                                    res.push(false);
+                                }
+                            }
+                            assert_eq!(num, 0);
+
+                            ArrayExpressionInner::Value(
+                                res.into_iter()
+                                    .map(|v| BooleanExpression::Value(v).into())
+                                    .collect::<Vec<_>>()
                                     .into(),
-                                _ => unreachable!("should be an array value"),
-                            }
-                        }
-
-                        fn process_u_to_bits<'ast, T: Field>(
-                            variables: Vec<TypedAssignee<'ast, T>>,
-                            arguments: Vec<TypedExpression<'ast, T>>,
-                            bitwidth: UBitwidth,
-                        ) -> TypedExpression<'ast, T> {
-                            assert_eq!(variables.len(), 1);
-                            assert_eq!(arguments.len(), 1);
-
-                            match UExpression::try_from(arguments[0].clone())
-                                .unwrap()
-                                .into_inner()
-                            {
-                                UExpressionInner::Value(v) => {
-                                    let mut num = v;
-                                    let mut res = vec![];
-
-                                    for i in (0..bitwidth as u32).rev() {
-                                        if 2u128.pow(i) <= num {
-                                            num -= 2u128.pow(i);
-                                            res.push(true);
-                                        } else {
-                                            res.push(false);
-                                        }
-                                    }
-                                    assert_eq!(num, 0);
-
-                                    ArrayExpressionInner::Value(
-                                        res.into_iter()
-                                            .map(|v| BooleanExpression::Value(v).into())
-                                            .collect::<Vec<_>>()
-                                            .into(),
-                                    )
-                                    .annotate(Type::Boolean, bitwidth.to_usize() as u32)
-                                    .into()
-                                }
-                                _ => unreachable!("should be a uint value"),
-                            }
-                        }
-
-                        match arguments.iter().all(|a| a.is_constant()) {
-                            true => {
-                                let r: Option<TypedExpression<'ast, T>> = match embed {
-                                    FlatEmbed::BitArrayLe => Ok(None), // todo
-                                    FlatEmbed::U64FromBits => Ok(Some(process_u_from_bits(
-                                        assignees.clone(),
-                                        arguments.clone(),
-                                        UBitwidth::B64,
-                                    ))),
-                                    FlatEmbed::U32FromBits => Ok(Some(process_u_from_bits(
-                                        assignees.clone(),
-                                        arguments.clone(),
-                                        UBitwidth::B32,
-                                    ))),
-                                    FlatEmbed::U16FromBits => Ok(Some(process_u_from_bits(
-                                        assignees.clone(),
-                                        arguments.clone(),
-                                        UBitwidth::B16,
-                                    ))),
-                                    FlatEmbed::U8FromBits => Ok(Some(process_u_from_bits(
-                                        assignees.clone(),
-                                        arguments.clone(),
-                                        UBitwidth::B8,
-                                    ))),
-                                    FlatEmbed::U64ToBits => Ok(Some(process_u_to_bits(
-                                        assignees.clone(),
-                                        arguments.clone(),
-                                        UBitwidth::B64,
-                                    ))),
-                                    FlatEmbed::U32ToBits => Ok(Some(process_u_to_bits(
-                                        assignees.clone(),
-                                        arguments.clone(),
-                                        UBitwidth::B32,
-                                    ))),
-                                    FlatEmbed::U16ToBits => Ok(Some(process_u_to_bits(
-                                        assignees.clone(),
-                                        arguments.clone(),
-                                        UBitwidth::B16,
-                                    ))),
-                                    FlatEmbed::U8ToBits => Ok(Some(process_u_to_bits(
-                                        assignees.clone(),
-                                        arguments.clone(),
-                                        UBitwidth::B8,
-                                    ))),
-                                    FlatEmbed::Unpack => {
-                                        assert_eq!(assignees.len(), 1);
-                                        assert_eq!(arguments.len(), 1);
-                                        assert_eq!(generics.len(), 1);
-
-                                        let bit_width = generics[0];
-
-                                        match FieldElementExpression::<T>::try_from(
-                                            arguments[0].clone(),
-                                        )
-                                        .unwrap()
-                                        {
-                                            FieldElementExpression::Number(num) => {
-                                                let mut acc = num.clone();
-                                                let mut res = vec![];
-
-                                                for i in (0..bit_width as usize).rev() {
-                                                    if T::from(2).pow(i) <= acc {
-                                                        acc = acc - T::from(2).pow(i);
-                                                        res.push(true);
-                                                    } else {
-                                                        res.push(false);
-                                                    }
-                                                }
-
-                                                if acc != T::zero() {
-                                                    Err(Error::ValueTooLarge(format!(
-                                                        "Cannot unpack `{}` to `{}`: value is too large",
-                                                        num, assignees.first().unwrap().get_type()
-                                                    )))
-                                                } else {
-                                                    Ok(Some(
-                                                        ArrayExpressionInner::Value(
-                                                            res.into_iter()
-                                                                .map(|v| {
-                                                                    BooleanExpression::Value(v)
-                                                                        .into()
-                                                                })
-                                                                .collect::<Vec<_>>()
-                                                                .into(),
-                                                        )
-                                                        .annotate(Type::Boolean, bit_width)
-                                                        .into(),
-                                                    ))
-                                                }
-                                            }
-                                            _ => unreachable!("should be a field value"),
-                                        }
-                                    }
-                                    #[cfg(feature = "bellman")]
-                                    FlatEmbed::Sha256Round => Ok(None),
-                                    #[cfg(feature = "ark")]
-                                    FlatEmbed::SnarkVerifyBls12377 => Ok(None),
-                                }?;
-
-                                Ok(match r {
-                                    // if the function call returns a constant
-                                    Some(expr) => {
-                                        let mut assignees = assignees;
-
-                                        match assignees.pop().unwrap() {
-                                            TypedAssignee::Identifier(var) => {
-                                                self.constants.insert(var.id, expr);
-                                                vec![]
-                                            }
-                                            assignee => {
-                                                match self.try_get_constant_mut(&assignee) {
-                                                    Ok((_, c)) => {
-                                                        *c = expr;
-                                                        vec![]
-                                                    }
-                                                    Err(v) => match self.constants.remove(&v.id) {
-                                                        Some(c) => vec![
-                                                            TypedStatement::Definition(
-                                                                v.clone().into(),
-                                                                c,
-                                                            ),
-                                                            TypedStatement::Definition(
-                                                                assignee, expr,
-                                                            ),
-                                                        ],
-                                                        None => {
-                                                            vec![TypedStatement::Definition(
-                                                                assignee, expr,
-                                                            )]
-                                                        }
-                                                    },
-                                                }
-                                            }
-                                        }
-                                    }
-                                    None => {
-                                        // if the function call does not return a constant, invalidate the cache
-                                        // this happpens because we only propagate certain calls here
-                                        let mut assignees = assignees;
-
-                                        let assignee = assignees.pop().unwrap();
-
-                                        let v = self
-                                            .try_get_constant_mut(&assignee)
-                                            .map(|(v, _)| v)
-                                            .unwrap_or_else(|v| v);
-
-                                        match self.constants.remove(&v.id) {
-                                            Some(c) => vec![
-                                                TypedStatement::Definition(v.clone().into(), c),
-                                                TypedStatement::MultipleDefinition(
-                                                    vec![assignee],
-                                                    TypedExpressionListInner::EmbedCall(
-                                                        embed, generics, arguments,
-                                                    )
-                                                    .annotate(types),
-                                                ),
-                                            ],
-                                            None => vec![TypedStatement::MultipleDefinition(
-                                                vec![assignee],
-                                                TypedExpressionListInner::EmbedCall(
-                                                    embed, generics, arguments,
-                                                )
-                                                .annotate(types),
-                                            )],
-                                        }
-                                    }
-                                })
-                            }
-                            false => {
-                                // if the function arguments are not constant, invalidate the cache
-                                // for the return assignees
-
-                                let def = TypedStatement::MultipleDefinition(
-                                    assignees.clone(),
-                                    TypedExpressionListInner::EmbedCall(embed, generics, arguments)
-                                        .annotate(types),
-                                );
-
-                                let invalidations = assignees.iter().flat_map(|assignee| {
-                                    let v = self
-                                        .try_get_constant_mut(assignee)
-                                        .map(|(v, _)| v)
-                                        .unwrap_or_else(|v| v);
-                                    match self.constants.remove(&v.id) {
-                                        Some(c) => {
-                                            vec![TypedStatement::Definition(v.clone().into(), c)]
-                                        }
-                                        None => vec![],
-                                    }
-                                });
-
-                                Ok(invalidations.chain(std::iter::once(def)).collect())
-                            }
-                        }
-                    }
-                    TypedExpressionListInner::FunctionCall(function_call) => {
-                        let generics = function_call
-                            .generics
-                            .into_iter()
-                            .map(|g| g.map(|g| self.fold_uint_expression(g)).transpose())
-                            .collect::<Result<_, _>>()?;
-
-                        let arguments: Vec<_> = function_call
-                            .arguments
-                            .into_iter()
-                            .map(|a| self.fold_expression(a))
-                            .collect::<Result<_, _>>()?;
-
-                        // invalidate the cache for the return assignees as this call mutates them
-
-                        let def = TypedStatement::MultipleDefinition(
-                            assignees.clone(),
-                            TypedExpressionList::function_call(
-                                function_call.function_key,
-                                generics,
-                                arguments,
                             )
-                            .annotate(types),
-                        );
-
-                        let invalidations = assignees.iter().flat_map(|assignee| {
-                            let v = self
-                                .try_get_constant_mut(assignee)
-                                .map(|(v, _)| v)
-                                .unwrap_or_else(|v| v);
-                            match self.constants.remove(&v.id) {
-                                Some(c) => {
-                                    vec![TypedStatement::Definition(v.clone().into(), c)]
-                                }
-                                None => vec![],
-                            }
-                        });
-
-                        Ok(invalidations.chain(std::iter::once(def)).collect())
+                            .annotate(Type::Boolean, bitwidth.to_usize() as u32)
+                            .into()
+                        }
+                        _ => unreachable!("should be a uint value"),
                     }
-                }?;
+                }
 
-                Ok(statements)
+                match embed_call.arguments.iter().all(|a| a.is_constant()) {
+                    true => {
+                        let r: Option<TypedExpression<'ast, T>> = match embed_call.embed {
+                            FlatEmbed::BitArrayLe => Ok(None), // todo
+                            FlatEmbed::U64FromBits => Ok(Some(process_u_from_bits(
+                                &embed_call.arguments,
+                                UBitwidth::B64,
+                            ))),
+                            FlatEmbed::U32FromBits => Ok(Some(process_u_from_bits(
+                                &embed_call.arguments,
+                                UBitwidth::B32,
+                            ))),
+                            FlatEmbed::U16FromBits => Ok(Some(process_u_from_bits(
+                                &embed_call.arguments,
+                                UBitwidth::B16,
+                            ))),
+                            FlatEmbed::U8FromBits => Ok(Some(process_u_from_bits(
+                                &embed_call.arguments,
+                                UBitwidth::B8,
+                            ))),
+                            FlatEmbed::U64ToBits => Ok(Some(process_u_to_bits(
+                                &embed_call.arguments,
+                                UBitwidth::B64,
+                            ))),
+                            FlatEmbed::U32ToBits => Ok(Some(process_u_to_bits(
+                                &embed_call.arguments,
+                                UBitwidth::B32,
+                            ))),
+                            FlatEmbed::U16ToBits => Ok(Some(process_u_to_bits(
+                                &embed_call.arguments,
+                                UBitwidth::B16,
+                            ))),
+                            FlatEmbed::U8ToBits => Ok(Some(process_u_to_bits(
+                                &embed_call.arguments,
+                                UBitwidth::B8,
+                            ))),
+                            FlatEmbed::Unpack => {
+                                assert_eq!(embed_call.arguments.len(), 1);
+                                assert_eq!(embed_call.generics.len(), 1);
+
+                                let bit_width = embed_call.generics[0];
+
+                                match FieldElementExpression::<T>::try_from(
+                                    embed_call.arguments[0].clone(),
+                                )
+                                .unwrap()
+                                {
+                                    FieldElementExpression::Number(num) => {
+                                        let mut acc = num.clone();
+                                        let mut res = vec![];
+
+                                        for i in (0..bit_width as usize).rev() {
+                                            if T::from(2).pow(i) <= acc {
+                                                acc = acc - T::from(2).pow(i);
+                                                res.push(true);
+                                            } else {
+                                                res.push(false);
+                                            }
+                                        }
+
+                                        if acc != T::zero() {
+                                            Err(Error::ValueTooLarge(format!(
+                                                "Cannot unpack `{}` to `{}`: value is too large",
+                                                num,
+                                                assignee.get_type()
+                                            )))
+                                        } else {
+                                            Ok(Some(
+                                                ArrayExpressionInner::Value(
+                                                    res.into_iter()
+                                                        .map(|v| BooleanExpression::Value(v).into())
+                                                        .collect::<Vec<_>>()
+                                                        .into(),
+                                                )
+                                                .annotate(Type::Boolean, bit_width)
+                                                .into(),
+                                            ))
+                                        }
+                                    }
+                                    _ => unreachable!("should be a field value"),
+                                }
+                            }
+                            #[cfg(feature = "bellman")]
+                            FlatEmbed::Sha256Round => Ok(None),
+                            #[cfg(feature = "ark")]
+                            FlatEmbed::SnarkVerifyBls12377 => Ok(None),
+                        }?;
+
+                        Ok(match r {
+                            // if the function call returns a constant
+                            Some(expr) => match assignee {
+                                TypedAssignee::Identifier(var) => {
+                                    self.constants.insert(var.id, expr);
+                                    vec![]
+                                }
+                                assignee => match self.try_get_constant_mut(&assignee) {
+                                    Ok((_, c)) => {
+                                        *c = expr;
+                                        vec![]
+                                    }
+                                    Err(v) => match self.constants.remove(&v.id) {
+                                        Some(c) => vec![
+                                            TypedStatement::Definition(v.clone().into(), c.into()),
+                                            TypedStatement::Definition(assignee, expr.into()),
+                                        ],
+                                        None => {
+                                            vec![TypedStatement::Definition(assignee, expr.into())]
+                                        }
+                                    },
+                                },
+                            },
+                            None => {
+                                // if the function call does not return a constant, invalidate the cache
+                                // this happens because we only propagate certain calls here
+
+                                let v = self
+                                    .try_get_constant_mut(&assignee)
+                                    .map(|(v, _)| v)
+                                    .unwrap_or_else(|v| v);
+
+                                match self.constants.remove(&v.id) {
+                                    Some(c) => vec![
+                                        TypedStatement::Definition(v.clone().into(), c.into()),
+                                        TypedStatement::Definition(assignee, embed_call.into()),
+                                    ],
+                                    None => vec![TypedStatement::Definition(
+                                        assignee,
+                                        embed_call.into(),
+                                    )],
+                                }
+                            }
+                        })
+                    }
+                    false => {
+                        // if the function arguments are not constant, invalidate the cache
+                        // for the return assignees
+                        let def = TypedStatement::Definition(assignee.clone(), embed_call.into());
+
+                        let v = self
+                            .try_get_constant_mut(&assignee)
+                            .map(|(v, _)| v)
+                            .unwrap_or_else(|v| v);
+
+                        Ok(match self.constants.remove(&v.id) {
+                            Some(c) => {
+                                vec![TypedStatement::Definition(v.clone().into(), c.into()), def]
+                            }
+                            None => vec![def],
+                        })
+                    }
+                }
             }
             TypedStatement::Assertion(e, ty) => {
                 let e_str = e.to_string();
                 let expr = self.fold_boolean_expression(e)?;
                 match expr {
-                    BooleanExpression::Value(v) if !v => {
+                    BooleanExpression::Value(false) => {
                         Err(Error::AssertionFailed(format!("{}: ({})", ty, e_str)))
                     }
+                    BooleanExpression::Value(true) => Ok(vec![]),
                     _ => Ok(vec![TypedStatement::Assertion(expr, ty)]),
                 }
             }
@@ -656,13 +544,6 @@ impl<'ast, 'a, T: Field> ResultFolder<'ast, T> for Propagator<'ast, 'a, T> {
         e: UExpressionInner<'ast, T>,
     ) -> Result<UExpressionInner<'ast, T>, Error> {
         match e {
-            UExpressionInner::Identifier(id) => match self.constants.get(&id) {
-                Some(e) => match e {
-                    TypedExpression::Uint(e) => Ok(e.as_inner().clone()),
-                    _ => unreachable!("constant stored for a uint should be a uint"),
-                },
-                None => Ok(UExpressionInner::Identifier(id)),
-            },
             UExpressionInner::Add(box e1, box e2) => match (
                 self.fold_uint_expression(e1)?.into_inner(),
                 self.fold_uint_expression(e2)?.into_inner(),
@@ -886,15 +767,6 @@ impl<'ast, 'a, T: Field> ResultFolder<'ast, T> for Propagator<'ast, 'a, T> {
         e: FieldElementExpression<'ast, T>,
     ) -> Result<FieldElementExpression<'ast, T>, Error> {
         match e {
-            FieldElementExpression::Identifier(id) => match self.constants.get(&id) {
-                Some(e) => match e {
-                    TypedExpression::FieldElement(e) => Ok(e.clone()),
-                    _ => unreachable!(
-                        "constant stored for a field element should be a field element"
-                    ),
-                },
-                None => Ok(FieldElementExpression::Identifier(id)),
-            },
             FieldElementExpression::Add(box e1, box e2) => match (
                 self.fold_field_expression(e1)?,
                 self.fold_field_expression(e2)?,
@@ -1048,7 +920,7 @@ impl<'ast, 'a, T: Field> ResultFolder<'ast, T> for Propagator<'ast, 'a, T> {
                     }
                 }
                 (ArrayExpressionInner::Identifier(id), UExpressionInner::Value(n)) => {
-                    match self.constants.get(&id) {
+                    match self.constants.get(&id.id) {
                         Some(a) => match a {
                             TypedExpression::Array(a) => match a.as_inner() {
                                 ArrayExpressionInner::Value(v) => {
@@ -1087,13 +959,6 @@ impl<'ast, 'a, T: Field> ResultFolder<'ast, T> for Propagator<'ast, 'a, T> {
         e: ArrayExpressionInner<'ast, T>,
     ) -> Result<ArrayExpressionInner<'ast, T>, Error> {
         match e {
-            ArrayExpressionInner::Identifier(id) => match self.constants.get(&id) {
-                Some(e) => match e {
-                    TypedExpression::Array(e) => Ok(e.as_inner().clone()),
-                    _ => panic!("constant stored for an array should be an array"),
-                },
-                None => Ok(ArrayExpressionInner::Identifier(id)),
-            },
             ArrayExpressionInner::Value(exprs) => {
                 Ok(ArrayExpressionInner::Value(
                     exprs
@@ -1144,13 +1009,6 @@ impl<'ast, 'a, T: Field> ResultFolder<'ast, T> for Propagator<'ast, 'a, T> {
         e: StructExpressionInner<'ast, T>,
     ) -> Result<StructExpressionInner<'ast, T>, Error> {
         match e {
-            StructExpressionInner::Identifier(id) => match self.constants.get(&id) {
-                Some(e) => match e {
-                    TypedExpression::Struct(e) => Ok(e.as_inner().clone()),
-                    _ => panic!("constant stored for an array should be an array"),
-                },
-                None => Ok(StructExpressionInner::Identifier(id)),
-            },
             StructExpressionInner::Value(v) => {
                 let v = v.into_iter().zip(ty.iter()).map(|(v, member)|
                     match self.fold_expression(v) {
@@ -1171,19 +1029,23 @@ impl<'ast, 'a, T: Field> ResultFolder<'ast, T> for Propagator<'ast, 'a, T> {
         }
     }
 
+    fn fold_identifier_expression<E: Expr<'ast, T> + Id<'ast, T> + ResultFold<'ast, T>>(
+        &mut self,
+        _: &E::Ty,
+        id: IdentifierExpression<'ast, E>,
+    ) -> Result<IdentifierOrExpression<'ast, T, E>, Self::Error> {
+        match self.constants.get(&id.id).cloned() {
+            Some(e) => Ok(IdentifierOrExpression::Expression(E::from(e).into_inner())),
+            None => Ok(IdentifierOrExpression::Identifier(id)),
+        }
+    }
+
     fn fold_tuple_expression_inner(
         &mut self,
         ty: &TupleType<'ast, T>,
         e: TupleExpressionInner<'ast, T>,
     ) -> Result<TupleExpressionInner<'ast, T>, Error> {
         match e {
-            TupleExpressionInner::Identifier(id) => match self.constants.get(&id) {
-                Some(e) => match e {
-                    TypedExpression::Tuple(e) => Ok(e.as_inner().clone()),
-                    _ => panic!("constant stored for an tuple should be an tuple"),
-                },
-                None => Ok(TupleExpressionInner::Identifier(id)),
-            },
             TupleExpressionInner::Value(v) => {
                 let v = v.into_iter().zip(ty.elements.iter().enumerate()).map(|(v, (index, element_ty))|
                     match self.fold_expression(v) {
@@ -1253,13 +1115,6 @@ impl<'ast, 'a, T: Field> ResultFolder<'ast, T> for Propagator<'ast, 'a, T> {
         // These kind of reduction rules are easier to apply later in the process, when we have canonical representations
         // of expressions, ie `a + a` would always be written `2 * a`
         match e {
-            BooleanExpression::Identifier(id) => match self.constants.get(&id) {
-                Some(e) => match e {
-                    TypedExpression::Boolean(e) => Ok(e.clone()),
-                    _ => panic!("constant stored for a boolean should be a boolean"),
-                },
-                None => Ok(BooleanExpression::Identifier(id)),
-            },
             BooleanExpression::FieldLt(box e1, box e2) => {
                 let e1 = self.fold_field_expression(e1)?;
                 let e2 = self.fold_field_expression(e2)?;
@@ -1544,7 +1399,7 @@ mod tests {
                     BooleanExpression::Not(box BooleanExpression::Value(true));
 
                 let e_default: BooleanExpression<Bn128Field> =
-                    BooleanExpression::Not(box BooleanExpression::Identifier("a".into()));
+                    BooleanExpression::Not(box BooleanExpression::identifier("a".into()));
 
                 assert_eq!(
                     Propagator::with_constants(&mut Constants::new())
@@ -1577,14 +1432,14 @@ mod tests {
 
                 let e_identifier_true: BooleanExpression<Bn128Field> =
                     BooleanExpression::FieldEq(EqExpression::new(
-                        FieldElementExpression::Identifier("a".into()),
-                        FieldElementExpression::Identifier("a".into()),
+                        FieldElementExpression::identifier("a".into()),
+                        FieldElementExpression::identifier("a".into()),
                     ));
 
                 let e_identifier_unchanged: BooleanExpression<Bn128Field> =
                     BooleanExpression::FieldEq(EqExpression::new(
-                        FieldElementExpression::Identifier("a".into()),
-                        FieldElementExpression::Identifier("b".into()),
+                        FieldElementExpression::identifier("a".into()),
+                        FieldElementExpression::identifier("b".into()),
                     ));
 
                 assert_eq!(
@@ -1686,18 +1541,14 @@ mod tests {
 
                 let e_identifier_true: BooleanExpression<Bn128Field> =
                     BooleanExpression::ArrayEq(EqExpression::new(
-                        ArrayExpressionInner::Identifier("a".into())
-                            .annotate(Type::FieldElement, 1u32),
-                        ArrayExpressionInner::Identifier("a".into())
-                            .annotate(Type::FieldElement, 1u32),
+                        ArrayExpression::identifier("a".into()).annotate(Type::FieldElement, 1u32),
+                        ArrayExpression::identifier("a".into()).annotate(Type::FieldElement, 1u32),
                     ));
 
                 let e_identifier_unchanged: BooleanExpression<Bn128Field> =
                     BooleanExpression::ArrayEq(EqExpression::new(
-                        ArrayExpressionInner::Identifier("a".into())
-                            .annotate(Type::FieldElement, 1u32),
-                        ArrayExpressionInner::Identifier("b".into())
-                            .annotate(Type::FieldElement, 1u32),
+                        ArrayExpression::identifier("a".into()).annotate(Type::FieldElement, 1u32),
+                        ArrayExpression::identifier("b".into()).annotate(Type::FieldElement, 1u32),
                     ));
 
                 let e_non_canonical_true = BooleanExpression::ArrayEq(EqExpression::new(
@@ -1884,30 +1735,30 @@ mod tests {
                     Propagator::<Bn128Field>::with_constants(&mut Constants::new())
                         .fold_boolean_expression(BooleanExpression::And(
                             box BooleanExpression::Value(true),
-                            box BooleanExpression::Identifier(a_bool.clone())
+                            box BooleanExpression::identifier(a_bool.clone())
                         )),
-                    Ok(BooleanExpression::Identifier(a_bool.clone()))
+                    Ok(BooleanExpression::identifier(a_bool.clone()))
                 );
                 assert_eq!(
                     Propagator::<Bn128Field>::with_constants(&mut Constants::new())
                         .fold_boolean_expression(BooleanExpression::And(
-                            box BooleanExpression::Identifier(a_bool.clone()),
+                            box BooleanExpression::identifier(a_bool.clone()),
                             box BooleanExpression::Value(true),
                         )),
-                    Ok(BooleanExpression::Identifier(a_bool.clone()))
+                    Ok(BooleanExpression::identifier(a_bool.clone()))
                 );
                 assert_eq!(
                     Propagator::<Bn128Field>::with_constants(&mut Constants::new())
                         .fold_boolean_expression(BooleanExpression::And(
                             box BooleanExpression::Value(false),
-                            box BooleanExpression::Identifier(a_bool.clone())
+                            box BooleanExpression::identifier(a_bool.clone())
                         )),
                     Ok(BooleanExpression::Value(false))
                 );
                 assert_eq!(
                     Propagator::<Bn128Field>::with_constants(&mut Constants::new())
                         .fold_boolean_expression(BooleanExpression::And(
-                            box BooleanExpression::Identifier(a_bool.clone()),
+                            box BooleanExpression::identifier(a_bool.clone()),
                             box BooleanExpression::Value(false),
                         )),
                     Ok(BooleanExpression::Value(false))
@@ -1954,14 +1805,14 @@ mod tests {
                     Propagator::<Bn128Field>::with_constants(&mut Constants::new())
                         .fold_boolean_expression(BooleanExpression::Or(
                             box BooleanExpression::Value(true),
-                            box BooleanExpression::Identifier(a_bool.clone())
+                            box BooleanExpression::identifier(a_bool.clone())
                         )),
                     Ok(BooleanExpression::Value(true))
                 );
                 assert_eq!(
                     Propagator::<Bn128Field>::with_constants(&mut Constants::new())
                         .fold_boolean_expression(BooleanExpression::Or(
-                            box BooleanExpression::Identifier(a_bool.clone()),
+                            box BooleanExpression::identifier(a_bool.clone()),
                             box BooleanExpression::Value(true),
                         )),
                     Ok(BooleanExpression::Value(true))
@@ -1970,17 +1821,17 @@ mod tests {
                     Propagator::<Bn128Field>::with_constants(&mut Constants::new())
                         .fold_boolean_expression(BooleanExpression::Or(
                             box BooleanExpression::Value(false),
-                            box BooleanExpression::Identifier(a_bool.clone())
+                            box BooleanExpression::identifier(a_bool.clone())
                         )),
-                    Ok(BooleanExpression::Identifier(a_bool.clone()))
+                    Ok(BooleanExpression::identifier(a_bool.clone()))
                 );
                 assert_eq!(
                     Propagator::<Bn128Field>::with_constants(&mut Constants::new())
                         .fold_boolean_expression(BooleanExpression::Or(
-                            box BooleanExpression::Identifier(a_bool.clone()),
+                            box BooleanExpression::identifier(a_bool.clone()),
                             box BooleanExpression::Value(false),
                         )),
-                    Ok(BooleanExpression::Identifier(a_bool.clone()))
+                    Ok(BooleanExpression::identifier(a_bool.clone()))
                 );
                 assert_eq!(
                     Propagator::<Bn128Field>::with_constants(&mut Constants::new())

@@ -4,10 +4,10 @@
 //! @author Thibaut Schaeffer <thibaut@schaeff.fr>
 //! @date 2018
 
-use crate::typed_absy::folder::*;
-use crate::typed_absy::types::{MemberId, Type};
-use crate::typed_absy::*;
 use std::collections::HashSet;
+use zokrates_ast::typed::folder::*;
+use zokrates_ast::typed::types::{MemberId, Type};
+use zokrates_ast::typed::*;
 use zokrates_field::Field;
 
 pub struct VariableWriteRemover;
@@ -37,15 +37,13 @@ impl<'ast> VariableWriteRemover {
                     let inner_ty = base.inner_type();
                     let size = base.size();
 
-                    use std::convert::TryInto;
-
                     let size: u32 = size.try_into().unwrap();
 
                     let head = indices.remove(0);
                     let tail = indices;
 
                     match head {
-                        Access::Select(head) => {
+                        Access::Select(box head) => {
                             statements.insert(TypedStatement::Assertion(
                                 BooleanExpression::UintLt(box head.clone(), box size.into()),
                                 RuntimeError::SelectRangeCheck,
@@ -415,7 +413,7 @@ impl<'ast> VariableWriteRemover {
 
 #[derive(Clone, Debug)]
 enum Access<'ast, T: Field> {
-    Select(UExpression<'ast, T>),
+    Select(Box<UExpression<'ast, T>>),
     Member(MemberId),
     Element(u32),
 }
@@ -426,7 +424,7 @@ fn linear<T: Field>(a: TypedAssignee<T>) -> (Variable<T>, Vec<Access<T>>) {
         TypedAssignee::Identifier(v) => (v, vec![]),
         TypedAssignee::Select(box array, box index) => {
             let (v, mut indices) = linear(array);
-            indices.push(Access::Select(index));
+            indices.push(Access::Select(box index));
             (v, indices)
         }
         TypedAssignee::Member(box s, m) => {
@@ -457,11 +455,11 @@ fn is_constant<T>(assignee: &TypedAssignee<T>) -> bool {
 impl<'ast, T: Field> Folder<'ast, T> for VariableWriteRemover {
     fn fold_statement(&mut self, s: TypedStatement<'ast, T>) -> Vec<TypedStatement<'ast, T>> {
         match s {
-            TypedStatement::Definition(assignee, expr) => {
+            TypedStatement::Definition(assignee, DefinitionRhs::Expression(expr)) => {
                 let expr = self.fold_expression(expr);
 
                 if is_constant(&assignee) {
-                    vec![TypedStatement::Definition(assignee, expr)]
+                    vec![TypedStatement::definition(assignee, expr)]
                 } else {
                     // Note: here we redefine the whole object, ideally we would only redefine some of it
                     // Example: `a[0][i] = 42` we redefine `a` but we could redefine just `a[0]`
@@ -471,27 +469,21 @@ impl<'ast, T: Field> Folder<'ast, T> for VariableWriteRemover {
                     let base = match variable.get_type() {
                         Type::Int => unreachable!(),
                         Type::FieldElement => {
-                            FieldElementExpression::Identifier(variable.id.clone()).into()
+                            FieldElementExpression::identifier(variable.id.clone()).into()
                         }
-                        Type::Boolean => BooleanExpression::Identifier(variable.id.clone()).into(),
-                        Type::Uint(bitwidth) => UExpressionInner::Identifier(variable.id.clone())
+                        Type::Boolean => BooleanExpression::identifier(variable.id.clone()).into(),
+                        Type::Uint(bitwidth) => UExpression::identifier(variable.id.clone())
                             .annotate(bitwidth)
                             .into(),
-                        Type::Array(array_type) => {
-                            ArrayExpressionInner::Identifier(variable.id.clone())
-                                .annotate(*array_type.ty, array_type.size)
-                                .into()
-                        }
-                        Type::Struct(members) => {
-                            StructExpressionInner::Identifier(variable.id.clone())
-                                .annotate(members)
-                                .into()
-                        }
-                        Type::Tuple(tuple_ty) => {
-                            TupleExpressionInner::Identifier(variable.id.clone())
-                                .annotate(tuple_ty)
-                                .into()
-                        }
+                        Type::Array(array_type) => ArrayExpression::identifier(variable.id.clone())
+                            .annotate(*array_type.ty, *array_type.size)
+                            .into(),
+                        Type::Struct(members) => StructExpression::identifier(variable.id.clone())
+                            .annotate(members)
+                            .into(),
+                        Type::Tuple(tuple_ty) => TupleExpression::identifier(variable.id.clone())
+                            .annotate(tuple_ty)
+                            .into(),
                     };
 
                     let base = self.fold_expression(base);
@@ -499,7 +491,9 @@ impl<'ast, T: Field> Folder<'ast, T> for VariableWriteRemover {
                     let indices = indices
                         .into_iter()
                         .map(|a| match a {
-                            Access::Select(i) => Access::Select(self.fold_uint_expression(i)),
+                            Access::Select(box i) => {
+                                Access::Select(box self.fold_uint_expression(i))
+                            }
                             a => a,
                         })
                         .collect();
@@ -509,7 +503,7 @@ impl<'ast, T: Field> Folder<'ast, T> for VariableWriteRemover {
 
                     range_checks
                         .into_iter()
-                        .chain(std::iter::once(TypedStatement::Definition(
+                        .chain(std::iter::once(TypedStatement::definition(
                             TypedAssignee::Identifier(variable),
                             e,
                         )))

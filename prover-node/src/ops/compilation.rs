@@ -1,7 +1,7 @@
 use std::path::Path;
 use typed_arena::Arena;
+use zokrates_ast::ir::Statement;
 use zokrates_core::compile::{compile, CompilationArtifacts, CompileConfig};
-use zokrates_core::ir::Statement;
 use zokrates_field::Field;
 use zokrates_fs_resolver::FileSystemResolver;
 
