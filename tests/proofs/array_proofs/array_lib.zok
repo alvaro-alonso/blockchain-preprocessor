@@ -1,0 +1,21 @@
+
+def square<N>(u64[N] array) -> u64[N] {
+    u64[N] map;
+    for u32 i in 0..N {
+        map[i] = array[i] ** 2;
+    }
+    return map;
+}
+
+def sum<N>(u64[N] array) -> u64 {
+    u64 result = 0;
+    for u32 i in 0..N {
+        result = result + array[i];
+    }
+    return result;
+}
+
+def main(u64[3] a) -> u64 {
+    u64[3] squared_array = square(a);
+    return sum(a);
+}
