@@ -52,8 +52,9 @@ mod test {
     #[test]
     fn test_sucessful_compilation() {
         let code = r#"
-            def main(field N) -> (bool):
-                return N == 1
+            def main(field N) -> bool{
+                return N == 1;
+            }
         "#;
         let code_path = PathBuf::from("/test");
         let arena = Arena::new();
