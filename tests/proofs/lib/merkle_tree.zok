@@ -1,0 +1,42 @@
+import "ecc/babyjubjubParams" as context
+import "ecc/proofOfOwnership" as proofOfOwnership
+import "hashes/sha256/512bitPadded" as sha256
+import "utils/pack/nonStrictUnpack256" as unpack256
+import "utils/pack/unpack128" as unpack128
+import "utils/pack/pack256" as pack256
+import "hashes/utils/256bitsDirectionHelper" as multiplex
+
+
+def main<N>(
+    field[2] signature, 
+    private field pub_key, 
+    private bool[N] direction_selector, 
+    private field[N][2] path_digest,
+) -> (field) {
+
+	// proof that signature and pub_key are correct
+
+	
+    for u32 i in 0..N {
+
+    }
+    lhs = unpack256(pk[0])
+	rhs = unpack256(pk[1])
+	leafHash = sha256(lhs, rhs)
+	leafHash == combine256(leafDigest)
+	pathHash0 = combine256(pathDigest0)
+
+	field[256] currentDigest = leafHash
+
+	preimage = multiplex(directionSelector[0], currentDigest, pathHash0)
+	lhs = preimage[0..256]
+	rhs = preimage[256..512]
+	currentDigest = sha256(lhs, rhs)
+
+
+	treeRoot = combine256(rootDigest)
+	treeRoot == currentDigest
+
+	return True
+}
+   
