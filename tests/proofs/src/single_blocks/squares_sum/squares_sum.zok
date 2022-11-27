@@ -15,7 +15,7 @@ def sum<N>(field[N] array) -> field {
     return result;
 }
 
-def main (field[1000] measures) -> field {
+def main (private field[1000] measures) -> field {
     field[1000] sqrd_measures = power(measures, 2);
     return sum(sqrd_measures);
 }

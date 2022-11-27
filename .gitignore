@@ -8,6 +8,14 @@ prover-node/zokrates/zokrates_test
 # output folder of endpoints
 prover-node/out
 
+# binaries of zokrates proofs
+**/out
+*.r1cs
+*.wtns
+*.key
+proof.json
+witness
+
 # destination containing dataset
 tests/dataset/raw
 tests/dataset/*.csv

@@ -1,0 +1,9 @@
+from "../../../lib/merkle_tree" import merkleTreeProof, MerkleTreeProofStruct;
+
+const u32 TREE_DEPTH = 3;
+
+
+def main(u32[8] treeRoot ,private MerkleTreeProofStruct<TREE_DEPTH> proof) -> bool {
+    
+    return merkleTreeProof(treeRoot, proof);
+}

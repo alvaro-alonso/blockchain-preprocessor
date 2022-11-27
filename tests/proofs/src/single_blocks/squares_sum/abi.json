@@ -2,7 +2,7 @@
   "inputs": [
     {
       "name": "measures",
-      "public": true,
+      "public": false,
       "type": "array",
       "components": {
         "size": 1000,
