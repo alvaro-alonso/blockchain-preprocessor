@@ -1,7 +1,7 @@
 use std::path::Path;
 use typed_arena::Arena;
+use zokrates_ast::ir::Statement;
 use zokrates_core::compile::{compile, CompilationArtifacts, CompileConfig};
-use zokrates_core::ir::Statement;
 use zokrates_field::Field;
 use zokrates_fs_resolver::FileSystemResolver;
 
@@ -52,8 +52,9 @@ mod test {
     #[test]
     fn test_sucessful_compilation() {
         let code = r#"
-            def main(field N) -> (bool):
-                return N == 1
+            def main(field N) -> bool{
+                return N == 1;
+            }
         "#;
         let code_path = PathBuf::from("/test");
         let arena = Arena::new();
@@ -74,7 +75,7 @@ mod test {
         //         "type": "field"
         //       }
         //     ],
-        //     "outputs": [
+        //     "output": [
         //       {
         //         "type": "bool"
         //       }

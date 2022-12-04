@@ -9,10 +9,10 @@ use serde_json::from_reader;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
-use zokrates_core::ir::ProgEnum;
-use zokrates_core::proof_system::ark::Ark;
-use zokrates_core::proof_system::GM17;
-use zokrates_core::typed_absy::abi::Abi;
+use zokrates_ark::Ark;
+use zokrates_ast::ir::ProgEnum;
+use zokrates_ast::typed::abi::Abi;
+use zokrates_proof_systems::GM17;
 
 use crate::compute_witness::WitnessRequestBody;
 use crate::generate_proof::GenerateProofResponseBody;
