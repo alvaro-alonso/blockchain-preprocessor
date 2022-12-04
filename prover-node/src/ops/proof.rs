@@ -1,6 +1,6 @@
-use zokrates_core::ir;
-use zokrates_core::proof_system::*;
+use zokrates_ast::ir;
 use zokrates_field::Field;
+use zokrates_proof_systems::*;
 
 pub fn generate_proof<
     T: Field,
@@ -9,7 +9,7 @@ pub fn generate_proof<
     B: Backend<T, S>,
 >(
     program: ir::ProgIterator<T, I>,
-    witness: zokrates_core::ir::Witness<T>,
+    witness: ir::Witness<T>,
     pk: std::vec::Vec<u8>,
 ) -> Result<TaggedProof<T, S>, String> {
     log::info!("Generating proof...");
@@ -22,9 +22,9 @@ mod test {
     use super::*;
     use std::fs::File;
     use std::io::{BufReader, Read};
-    use zokrates_core::ir::ProgEnum;
-    use zokrates_core::proof_system::ark::Ark;
-    use zokrates_core::proof_system::GM17;
+    use zokrates_ark::Ark;
+    use zokrates_ast::ir::ProgEnum;
+    use zokrates_proof_systems::GM17;
 
     #[test]
     fn test_generate_correct_proof() {

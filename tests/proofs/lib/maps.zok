@@ -1,0 +1,16 @@
+
+def power<N>(field[N] array, u32 power) -> field[N] {
+    field[N] mut map = [0;N];
+    for u32 i in 0..N {
+        map[i] = array[i] ** power;
+    }
+    return map;
+}
+
+def multiply<N>(field[N] array, field factor) -> field[N] {
+    field[N] mut map = [0;N];
+    for u32 i in 0..N {
+        map[i] = array[i] * factor;
+    }
+    return map;
+}

@@ -15,9 +15,3 @@ for f_name in glob('../raw/*.json'):
     
 df = pd.concat(data, ignore_index=True)
 df.to_csv("../discovergy_tabular.csv", sep='\t', index=False)
-
-
-# %%
-df.shape[0]
-
-
