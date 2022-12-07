@@ -1,7 +1,6 @@
 import pandas as pd
 import asyncio
 import aiohttp
-import time
 import abc
 
 class PerformanceTest(abc.ABC):
@@ -9,12 +8,14 @@ class PerformanceTest(abc.ABC):
         self, 
         name, 
         version, 
+        trial,
         description, 
         dest, 
         proof_id
     ):
         self.name = name
         self.version = version
+        self.trial = trial
         self.description
         self.dest = dest
         self.proof_id = proof_id
@@ -30,14 +31,12 @@ class PerformanceTest(abc.ABC):
         data: dict,
         **kwargs
     ) -> dict:
-        start = time.time()
         resp = await session.post(url, json=data, **kwargs)
         # Note that this may raise an exception for non-2xx responses
         # You can either handle that here, or pass the exception through
         data = await resp.json()
-        end = time.time()
         status = resp.status
-        return (start, end, data, status)
+        return (data, status)
 
     async def run(self):
         print(f"Requesting to {self.dest}")

@@ -1,0 +1,35 @@
+from "ecc/babyjubjubParams" import BabyJubJubParams;
+import "signatures/verifyEddsa" as verifyEddsa;
+import "ecc/babyjubjubParams" as context;
+
+/*
+    R & S - signature
+    public key
+    M - message
+*/
+struct SignatureWitness {
+    field[2] R;
+    field S;
+    field[2] A;
+    u32[8] M0;
+    u32[8] M1;
+}
+
+const u32 SIG_NUM = 50;
+
+def signatureProof(SignatureWitness signature) -> bool {
+    
+    //Verify Signature (R,S) with PupKey (A) on Hash (M0, M1)
+    BabyJubJubParams context = context();
+    bool isVerified = verifyEddsa(signature.R, signature.S, signature.A, signature.M0, signature.M1, context);
+
+    return isVerified;
+}
+
+def main(SignatureWitness[SIG_NUM] signatures) -> bool {
+    for u32 i in 0..SIG_NUM {
+        assert(signatureProof(signatures[i]));
+    }
+    return true;
+}
+
