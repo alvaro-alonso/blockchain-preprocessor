@@ -4,7 +4,7 @@ import "ecc/babyjubjubParams" as context;
 
 /*
     R & S - signature
-    public key
+    A - public key
     M - message
 */
 struct SignatureWitness {
@@ -15,7 +15,7 @@ struct SignatureWitness {
     u32[8] M1;
 }
 
-const u32 SIG_NUM = 50;
+const u32 SIG_NUM = 1;
 
 def signatureProof(SignatureWitness signature) -> bool {
     

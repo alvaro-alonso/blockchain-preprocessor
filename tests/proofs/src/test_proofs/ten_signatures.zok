@@ -4,7 +4,7 @@ import "ecc/babyjubjubParams" as context;
 
 /*
     R & S - signature
-    public key
+    A - public key
     M - message
 */
 struct SignatureWitness {
