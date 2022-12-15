@@ -1,36 +1,34 @@
-# To add a new cell, type '# %%'
-# To add a new markdown cell, type '# %% [markdown]'
 # %%
 import pandas as pd
-import random
 from multiprocesspandas import applyparallel
 
 from tqdm import tqdm
 from zokrates_pycrypto.eddsa import PrivateKey, PublicKey
-from zokrates_pycrypto.field import FQ
-from zokrates_pycrypto.utils import write_signature_for_zokrates_cli
+
 
 tqdm.pandas()
 
 df = pd.read_csv("discovergy_tabular.csv", sep='\t')
 
+# convert raw values into byte arrays of 2 bytes
+df['PAvg'] = df['PAvg'].fillna(0.01).apply(lambda x: min(int(abs(x) * 100), int(2 ** 16 - 1)).to_bytes(2, 'big', signed=False))
+
+# aggregate the byte measures into 64 byte messages
+agg = df.sort_values('IEnd').groupby('MId').PAvg.apply(list)
+agg = agg.apply(lambda x: [b''.join(x[i:i+32]).rjust(64, b"\0") for i in range(0, len(x), 32)])
+bytes = agg.explode().to_frame()
+
+# generate priv_k und pub_k for each sensor
 di = df.MId.drop_duplicates().to_frame()
 di['priv_key'] = di.MId.apply(lambda x: PrivateKey.from_rand())
 di['pub_key'] = di['priv_key'].apply(lambda x: PublicKey.from_private(x))
 
-dff = df.set_index('MId').join(di.set_index('MId'))
+sign_df = di.set_index('MId').join(bytes)
 
-# create a msg from PAvg and EOut 
-dff['PAvg'] = dff['PAvg'].fillna(0).apply(lambda x: int(abs(x)))
-dff['EOut'] = dff['EOut'].fillna(0).apply(lambda x: int(x))
-dff['msg'] = dff.fillna(0).apply(lambda x: x.PAvg.to_bytes(32, 'big') +  x.EOut.to_bytes(32, 'big'), axis=1)
-dff.head(5)
-
+sign_df.head(5)
 
 # %%
-sign_df = dff
-sign_df['signature'] = sign_df.progress_apply(lambda x: x.priv_key.sign(x.msg), axis=1)
-
+sign_df['signature'] = sign_df.progress_apply(lambda x: x.priv_key.sign(x.PAvg), axis=1)
 
 # %%
 def signature_args(pk, sig, msg):
@@ -47,11 +45,15 @@ def signature_args(pk, sig, msg):
 
     return args
 
-sign_df['args'] = sign_df.progress_apply(lambda x: signature_args(x.pub_key, x.signature, x.msg), axis=1)
+sign_df['args'] = sign_df.progress_apply(lambda x: signature_args(x.pub_key, x.signature, x.PAvg), axis=1)
 sign_df['priv_key'] = sign_df['priv_key'].apply(lambda x: str(x.fe))
-sign_df['pub_key'] = sign_df['pub_key'].apply(lambda point: {"x": str(point.p.x), "y": str(point.p.y)})
-sign_df['msg'] = sign_df['msg'].apply(lambda x: int.from_bytes(x, byteorder='big', signed=False))
+sign_df['msg'] = sign_df['PAvg'].apply(lambda x: x.hex())
 sign_df['sign'] = sign_df['signature'].apply(lambda sig: { "sig_R": {"x": str(sig[0].x), "y": str(sig[0].y)}, "sig_S": str(sig[1]) })
+sign_df['pub_key'] = sign_df['pub_key'].apply(lambda point: {"x": str(point.p.x), "y": str(point.p.y)})
 
-sign_df.reset_index()[['MId', 'priv_key', 'pub_key', 'PAvg', 'EOut','msg', 'sign', 'args']].to_json(path_or_buf='test_data.json', orient='records')
+sign_df.reset_index()[['MId', 'priv_key', 'pub_key', 'msg', 'sign', 'args']].to_json(path_or_buf='test_data.json', orient='records')
+
+# %%
+
+
 
