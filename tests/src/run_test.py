@@ -18,4 +18,3 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     future = asyncio.ensure_future(test.run())
     loop.run_until_complete(future)
-    # asyncio.run(test.run())
