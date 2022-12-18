@@ -33,3 +33,6 @@ Cargo.lock
 
 # vs code
 **/**.code-workspace
+
+# python files
+__pycache__

@@ -60,7 +60,8 @@ class PerformanceTest:
     async def run(self, **kwargs):
         url = f"{self.dest}/{self.proof_id}/compute-generate-proof"
         print(f"Requesting to {url}")
-        async with aiohttp.ClientSession(timeout=None) as session:
+        timeout = aiohttp.ClientTimeout(total=None)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             tasks = []
             for proof in self.data:
                 req_body = {"payload": proof}
