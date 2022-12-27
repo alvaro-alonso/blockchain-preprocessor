@@ -2,7 +2,9 @@ import pandas as pd
 import asyncio
 import aiohttp
 import time
+import json
 
+from datetime import date
 from tqdm.asyncio import tqdm
 
 
@@ -48,20 +50,26 @@ class PerformanceTest:
         data: dict,
         **kwargs
     ) -> dict:
-        start = time.time()
         resp = await session.post(url, json=data, **kwargs)
-        # Note that this may raise an exception for non-2xx responses
-        # You can either handle that here, or pass the exception through
-        data = await resp.json()
-        status = resp.status
-        self.pbar.update(1)
-        return (start, data, status)
+        try: 
+            # Note that this may raise an exception for non-2xx responses
+            # You can either handle that here, or pass the exception through
+            data = await resp.json()
+            status = resp.status
+            self.pbar.update(1)
+            return { "payload": data, "status": status }
+        except Exception as e:
+            print(resp)
+            print(e)
+            self.pbar.update(1)
 
     async def run(self, **kwargs):
         url = f"{self.dest}/{self.proof_id}/compute-generate-proof"
         print(f"Requesting to {url}")
+        start = time.time()
         timeout = aiohttp.ClientTimeout(total=None)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
+        connector = aiohttp.TCPConnector(limit=3)
+        async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
             tasks = []
             for proof in self.data:
                 req_body = {"payload": proof}
@@ -71,7 +79,15 @@ class PerformanceTest:
             # completed.  If you want to process results greedily as they come in,
             # loop over asyncio.as_completed()
             self.pbar = tqdm(total=len(tasks), desc='Scanning files')
-            htmls = await asyncio.gather(*tasks, return_exceptions=True)
-            print(htmls)
-            return htmls
+            responses = await asyncio.gather(*tasks)
+            end = time.time()
+            result = { 
+                "time_taken": round(end - start, 3),
+                "results": responses
+            }
+            result_json = json.dumps(result, indent=4)
+            with open(f"results/{self.name}_{date.today()}.json", "w") as outfile:
+                outfile.write(result_json)
+            
+            return result
 
