@@ -15,16 +15,23 @@ spec:
       labels:
         app: zokrates-api
     spec:
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: zokrates-api
       containers:
       - name: zokrates
-        image: alvaround/zokrates-api:latest
+        image: alvaround/zokrates-api:0.1.0
         imagePullPolicy: IfNotPresent # use local image if downloaded ex: $ minikube ssh docker pull <IMAGE>
         resources:
           requests:
             memory: "100Mi"
             cpu: "250m"
           limits:
-            memory: "500Mi"
+            memory: "6000Mi"
             cpu: "500m"
         volumeMounts:
         - name: zfs
