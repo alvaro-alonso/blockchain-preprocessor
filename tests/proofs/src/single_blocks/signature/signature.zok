@@ -1,6 +1,5 @@
 from "../../../lib/proof_of_ownership" import signatureProof, SignatureWitness;
 
-// const u32 SIGNATURE_NUMBER = 10;
 
 def main(private SignatureWitness sensorSignature) {
 

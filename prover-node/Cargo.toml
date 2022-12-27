@@ -20,7 +20,7 @@ zokrates_field = { version = "0.5.2", path = "./zokrates/zokrates_field", defaul
 zokrates_fs_resolver = { version = "0.5.2", path = "./zokrates/zokrates_fs_resolver", default-features = false }
 zokrates_interpreter = { version = "0.1", path = "./zokrates/zokrates_interpreter", default-features = false }
 zokrates_proof_systems = { version = "0.1", path = "./zokrates/zokrates_proof_systems", default-features = false }
-zokrates_stdlib = { version = "0.2.8", path = "./zokrates/zokrates_stdlib", default-features = false }
+zokrates_stdlib = { version = "0.3.2", path = "./zokrates/zokrates_stdlib", default-features = false }
 log = "0.4"
 typed-arena = "1.4.1"
 sha2 = "0.10"

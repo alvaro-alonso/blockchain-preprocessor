@@ -1,8 +1,9 @@
+use crate::rocket::data::ToByteUnit;
 use prover_node::ops::compilation::api_compile;
 use prover_node::utils::config::AppConfig;
 use prover_node::utils::errors::{ApiError, ApiResult};
 use rocket::serde::{json::Json, Deserialize, Serialize};
-use rocket::State;
+use rocket::{Data, State};
 use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::openapi;
 use serde_json::to_writer_pretty;
@@ -15,13 +16,6 @@ use zokrates_field::Bn128Field;
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(crate = "rocket::serde")]
-#[schemars(example = "request_example")]
-pub struct CompileRequestBody {
-    program: String,
-}
-
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(crate = "rocket::serde")]
 pub struct CompileResponseBody {
     program_hash: String,
     // Abi type is not supported by JsonSchema
@@ -29,13 +23,18 @@ pub struct CompileResponseBody {
 }
 
 #[openapi]
-#[post("/compile", data = "<req_body>", format = "json")]
-pub fn post_compile_zokrates(
-    req_body: Json<CompileRequestBody>,
+#[post("/compile", data = "<program_file>")]
+pub async fn post_compile_zokrates(
+    program_file: Data<'_>,
     config: &State<AppConfig>,
 ) -> ApiResult<CompileResponseBody> {
     // create a hash for the .zok code, if the hash exists return err
-    let program = req_body.program.clone();
+    let program = program_file
+        .open(1_i32.megabytes())
+        .into_string()
+        .await
+        .unwrap()
+        .into_inner();
     let program_hash = format!("{:X}", Sha256::digest(&program));
     let path = Path::new(&config.out_dir).join(&program_hash);
     if path.is_dir() {
@@ -108,18 +107,18 @@ pub fn post_compile_zokrates(
     }
 }
 
-fn request_example() -> CompileRequestBody {
-    CompileRequestBody {
-        program: "def main(field N) -> (bool):\n    return (N == 1)".to_string(),
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::super::super::rocket;
     use super::*;
     use rocket::http::{ContentType, Status};
     use rocket::local::blocking::Client;
+
+    fn request_example() -> CompileRequestBody {
+        CompileRequestBody {
+            program: "def main(field N) -> (bool):\n    return (N == 1)".to_string(),
+        }
+    }
 
     #[test]
     fn successful_compilation() {
