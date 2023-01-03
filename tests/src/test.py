@@ -35,7 +35,7 @@ class PerformanceTest:
                 "M1": elements[13:]
             }
 
-        df = pd.read_json("../dataset/test_data.json")
+        df = pd.read_json("data/test_data.json")
         rows = df.shape[0] if first_row_num < 1 else first_row_num
         rows -= rows % self.chunk_size
         df = df.loc[:rows]
@@ -68,7 +68,7 @@ class PerformanceTest:
         print(f"Requesting to {url}")
         start = time.time()
         timeout = aiohttp.ClientTimeout(total=None)
-        connector = aiohttp.TCPConnector(limit=3)
+        connector = aiohttp.TCPConnector(limit=5)
         async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
             tasks = []
             for proof in self.data:
@@ -86,7 +86,7 @@ class PerformanceTest:
                 "results": responses
             }
             result_json = json.dumps(result, indent=4)
-            with open(f"results/{self.name}_{date.today()}.json", "w") as outfile:
+            with open(f"../results/{self.name}_{date.today()}.json", "w") as outfile:
                 outfile.write(result_json)
             
             return result
