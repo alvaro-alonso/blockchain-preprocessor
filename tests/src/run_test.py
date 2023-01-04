@@ -25,6 +25,23 @@ tests = {
         "chunk_size": 1,
         "head": 1,
     },
+    "block_merkle_proof": {
+        "proof_id": "24BD075A420C91E3FE098DA2B118CEE159FFA1C3BB547B2E9988F8D557F3602F",
+        "name": "block_merkle_proof",
+        "dest": os.getenv("CLUSTER_ADDRESS"),
+    },
+    "block_signature": {
+        "proof_id": "935C49E1AE1F05916BBD2B7053182F3D99C0D26DD6BD601145E5B6FECE872D62",
+        "name": "block_signature",
+        "dest": os.getenv("CLUSTER_ADDRESS"),
+        "chunk_size": 1,
+        "head": 1000,
+    },
+     "block_map_func": {
+        "proof_id": "87446ED898EAD75C208BCDB057A9F8EB20FF925F9D277C628F8CEA1F91F6A55E",
+        "name": "block_map_func",
+        "dest": os.getenv("CLUSTER_ADDRESS"),
+    },
     "input_num_ten_signatures": {
         "proof_id": "F9E7A5265933158FA7CBE22FEF23EB787C707DAB08929C8272EB38D5F2E69AC9",
         "name": "input_num_ten_signatures",
