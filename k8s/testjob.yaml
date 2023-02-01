@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  creationTimestamp: null
+  name: inputs-test-job
+  namespace: st-alonso
+spec:
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      containers:
+      - command:
+        - python
+        - run_test.py
+        - trial_one_signature
+        - trial_five_signatures
+        image: alvaround/zokrates-api-tests:latest
+        name: inputs-test-job
+        env:
+        - name: CLUSTER_ADDRESS
+          value: http://zokrates-service
+        volumeMounts:
+        - name: zfs
+          mountPath: /usr/app/results
+        resources: {}
+      volumes:
+        - name: zfs
+          persistentVolumeClaim:
+            claimName: test-results-zfs-pvc
+      restartPolicy: Never
+status: {}

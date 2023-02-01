@@ -31,7 +31,7 @@ pub async fn post_proving_key(
 
     let permanent_location = path.join("proving.key");
     upload
-        .open(200.megabytes())
+        .open(2000.megabytes())
         .into_file(permanent_location)
         .await
         .map_err(|e| ApiError::InternalError(e.to_string()))?;

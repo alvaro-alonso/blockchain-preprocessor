@@ -1,0 +1,57 @@
+{
+  "inputs": [
+    {
+      "name": "treeRoot",
+      "public": true,
+      "type": "array",
+      "components": {
+        "size": 8,
+        "type": "u32"
+      }
+    },
+    {
+      "name": "proof",
+      "public": false,
+      "type": "struct",
+      "components": {
+        "name": "MerkleTreeProofStruct",
+        "generics": [
+          3
+        ],
+        "members": [
+          {
+            "name": "leaf",
+            "type": "array",
+            "components": {
+              "size": 8,
+              "type": "u32"
+            }
+          },
+          {
+            "name": "directionSelector",
+            "type": "array",
+            "components": {
+              "size": 3,
+              "type": "bool"
+            }
+          },
+          {
+            "name": "path",
+            "type": "array",
+            "components": {
+              "size": 3,
+              "type": "array",
+              "components": {
+                "size": 8,
+                "type": "u32"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "output": {
+    "type": "bool"
+  }
+}

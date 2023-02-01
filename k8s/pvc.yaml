@@ -12,4 +12,20 @@ spec:
   volumeMode: Filesystem
   resources:
     requests:
-      storage: 8Gi
+      storage: 15Gi
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: test-results-zfs-pvc
+  namespace: st-alonso
+spec:
+  storageClassName: zfs
+  accessModes:
+    - ReadWriteOnce
+    - ReadOnlyMany
+    - ReadWriteMany
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 2Gi
