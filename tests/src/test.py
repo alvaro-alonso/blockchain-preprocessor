@@ -15,12 +15,14 @@ class PerformanceTest:
         name,
         dest, 
         chunk_size: int = 1,
+        connections: int = 1,
         head: int = 0
     ):
         self.proof_id = proof_id
         self.name = name
         self.dest = dest
-        self.chunk_size: int = chunk_size
+        self.connections = connections
+        self.chunk_size = chunk_size
         self.data = self.__load(head)
 
     def __load(self, first_row_num) -> list:
@@ -35,7 +37,7 @@ class PerformanceTest:
                 "M1": elements[13:]
             }
 
-        df = pd.read_json("../dataset/test_data.json")
+        df = pd.read_json("data/test_data.json")
         rows = df.shape[0] if first_row_num < 1 else first_row_num
         rows -= rows % self.chunk_size
         df = df.loc[:rows]
@@ -62,14 +64,15 @@ class PerformanceTest:
             print(resp)
             print(e)
             self.pbar.update(1)
+            return { "error": str(e), "response": str(resp) }
 
     async def run(self, **kwargs):
         url = f"{self.dest}/{self.proof_id}/compute-generate-proof"
         print(f"Requesting to {url}")
         start = time.time()
         timeout = aiohttp.ClientTimeout(total=None)
-        connector = aiohttp.TCPConnector(limit=3)
-        async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+        connector = aiohttp.TCPConnector(limit=self.connections)
+        async with aiohttp.ClientSession(timeout=timeout, connector=connector, trust_env=True) as session:
             tasks = []
             for proof in self.data:
                 req_body = {"payload": proof}
@@ -86,7 +89,7 @@ class PerformanceTest:
                 "results": responses
             }
             result_json = json.dumps(result, indent=4)
-            with open(f"results/{self.name}_{date.today()}.json", "w") as outfile:
+            with open(f"../results/{self.name}_{date.today()}.json", "w") as outfile:
                 outfile.write(result_json)
             
             return result
