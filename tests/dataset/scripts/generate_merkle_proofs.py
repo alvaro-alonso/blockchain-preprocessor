@@ -48,18 +48,14 @@ if __name__ == "__main__":
 
     path = [accounts[0], h1, h01]
 
-<<<<<<< HEAD
-    obj = json.dumps([
+    obj = json.dumps([[
         sha256_to_u32_array8(root),
         {
             "leaf": sha256_to_u32_array8(accounts[1]),
             "directionSelector": dir_sel,
             "path": [sha256_to_u32_array8(x) for x in path],
         }
-    ], indent=4)
+    ] for _ in range(1000)], indent=4)
 
-    with open("sample.json", "w") as outfile:
+    with open("thousand_merkle_proofs.json", "w") as outfile:
         outfile.write(obj)
-=======
-    print(witness_cli_args(root, accounts[1], dir_sel, path))
->>>>>>> 41-prepare-test-data-and-pumping-script
