@@ -1,0 +1,4 @@
+aiohttp==3.8.3
+async-timeout==4.0.2
+pandas==1.5.1
+tqdm==4.64.1
