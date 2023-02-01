@@ -15,12 +15,14 @@ class PerformanceTest:
         name,
         dest, 
         chunk_size: int = 1,
+        connections: int = 1,
         head: int = 0
     ):
         self.proof_id = proof_id
         self.name = name
         self.dest = dest
-        self.chunk_size: int = chunk_size
+        self.connections = connections
+        self.chunk_size = chunk_size
         self.data = self.__load(head)
 
     def __load(self, first_row_num) -> list:
@@ -62,14 +64,15 @@ class PerformanceTest:
             print(resp)
             print(e)
             self.pbar.update(1)
+            return { "error": str(e), "response": str(resp) }
 
     async def run(self, **kwargs):
         url = f"{self.dest}/{self.proof_id}/compute-generate-proof"
         print(f"Requesting to {url}")
         start = time.time()
         timeout = aiohttp.ClientTimeout(total=None)
-        connector = aiohttp.TCPConnector(limit=5)
-        async with aiohttp.ClientSession(timeout=timeout, connector=connector) as session:
+        connector = aiohttp.TCPConnector(limit=self.connections)
+        async with aiohttp.ClientSession(timeout=timeout, connector=connector, trust_env=True) as session:
             tasks = []
             for proof in self.data:
                 req_body = {"payload": proof}
