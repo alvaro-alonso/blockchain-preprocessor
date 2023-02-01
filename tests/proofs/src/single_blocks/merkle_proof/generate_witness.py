@@ -48,6 +48,7 @@ if __name__ == "__main__":
 
     path = [accounts[0], h1, h01]
 
+<<<<<<< HEAD
     obj = json.dumps([
         sha256_to_u32_array8(root),
         {
@@ -59,3 +60,6 @@ if __name__ == "__main__":
 
     with open("sample.json", "w") as outfile:
         outfile.write(obj)
+=======
+    print(witness_cli_args(root, accounts[1], dir_sel, path))
+>>>>>>> 41-prepare-test-data-and-pumping-script
