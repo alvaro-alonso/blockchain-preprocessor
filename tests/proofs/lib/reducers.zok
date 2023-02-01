@@ -1,0 +1,16 @@
+
+def sum<N>(field[N] array) -> field {
+    field mut result = 0;
+    for u32 i in 0..N {
+        result = result + array[i];
+    }
+    return result;
+}
+
+def product<N>(field[N] array) -> field {
+    field mut result = 0;
+    for u32 i in 0..N {
+        result = result * array[i];
+    }
+    return result;
+}

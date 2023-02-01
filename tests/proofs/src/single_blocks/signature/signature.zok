@@ -1,0 +1,9 @@
+from "../../../lib/proof_of_ownership" import signatureProof, SignatureWitness;
+
+
+def main(private SignatureWitness sensorSignature) {
+
+    bool check = signatureProof(sensorSignature);
+    assert(check);
+
+}

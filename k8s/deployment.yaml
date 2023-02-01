@@ -6,7 +6,7 @@ metadata:
   labels:
     app: zokrates-api
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: zokrates-api
@@ -15,33 +15,51 @@ spec:
       labels:
         app: zokrates-api
     spec:
+      # topologySpreadConstraints:
+      # - maxSkew: 1
+      #   topologyKey: kubernetes.io/hostname
+      #   whenUnsatisfiable: DoNotSchedule
+      #   labelSelector:
+      #     matchLabels:
+      #       app: zokrates-api
+      nodeName: knode4
       containers:
       - name: zokrates
-        image: alvaround/zokrates-api:latest
+        image: alvaround/zokrates-api:0.1.0
         imagePullPolicy: IfNotPresent # use local image if downloaded ex: $ minikube ssh docker pull <IMAGE>
+        env:
+        - name: ROCKET_LOG_LEVEL
+          value: "normal"
+        - name: ROCKET_WORKERS
+          value: "20"
         resources:
           requests:
             memory: "100Mi"
-            cpu: "250m"
-          limits:
-            memory: "500Mi"
-            cpu: "500m"
+            cpu: "2500m"
+          # limits:
+          #   memory: "12Gi"
+            # cpu: "5000m"
         volumeMounts:
         - name: zfs
           mountPath: /app/out
+        - name: results
+          mountPath: /app/results
         ports:
         - containerPort: 8000
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-            httpHeaders:
-            - name: X-Custom-Header
-              value: Awesome
-          initialDelaySeconds: 10
-          failureThreshold: 3
-          periodSeconds: 10
+        # livenessProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 8000
+        #     httpHeaders:
+        #     - name: X-Custom-Header
+        #       value: Awesome
+        #   initialDelaySeconds: 10
+        #   failureThreshold: 3
+        #   periodSeconds: 10
       volumes:
         - name: zfs
           persistentVolumeClaim:
             claimName: zokrates-zfs-pvc
+        - name: results
+          persistentVolumeClaim:
+            claimName: test-results-zfs-pvc

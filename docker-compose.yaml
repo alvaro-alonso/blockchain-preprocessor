@@ -2,19 +2,14 @@ version: "3.4"
 
 services:
   
-  prover:
+  zokrates:
 
-    container_name: "prover-node"
+    container_name: "zokrates"
     environment: 
       RUST_MIN_STACK: 1000000
-    command: cargo +nightly watch -x run
-    build:
-      dockerfile: Dockerfile.local
-      context: prover-node
-      cache_from:
-        - rustlang/rust:nightly-alpine3.15
+    image: "alvaround/zokrates-api:0.1.0"
     volumes:
-      - ./prover-node:/app
+      - ./prover-node/out:/app/out
     ports:
       - 8000:8000
-    
+ 

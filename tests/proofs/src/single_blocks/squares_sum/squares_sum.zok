@@ -1,0 +1,21 @@
+
+def power<N>(field[N] array, u32 power) -> field[N] {
+    field[N] mut map = [0;N];
+    for u32 i in 0..N {
+        map[i] = array[i] ** power;
+    }
+    return map;
+}
+
+def sum<N>(field[N] array) -> field {
+    field mut result = 0;
+    for u32 i in 0..N {
+        result = result + array[i];
+    }
+    return result;
+}
+
+def main (private field[1000] measures) -> field {
+    field[1000] sqrd_measures = power(measures, 2);
+    return sum(sqrd_measures);
+}
