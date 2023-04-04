@@ -1,0 +1,70 @@
+<mxfile host="65bd71144e">
+    <diagram id="fDlTkcSAq6EhD93O3-o5" name="Page-1">
+        <mxGraphModel dx="1002" dy="862" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="160" value="&lt;span style=&quot;font-size: 14px;&quot;&gt;ZIR N&lt;/span&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fontSize=18;size=34;" vertex="1" parent="1">
+                    <mxGeometry x="1070" y="580" width="70" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="158" value="&lt;span style=&quot;font-size: 14px;&quot;&gt;ZIR 1&lt;/span&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fontSize=18;size=34;" vertex="1" parent="1">
+                    <mxGeometry x="770" y="580" width="70" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="" style="rounded=0;whiteSpace=wrap;html=1;align=left;fillColor=none;" parent="1" vertex="1">
+                    <mxGeometry x="660" y="250" width="540" height="420" as="geometry"/>
+                </mxCell>
+                <mxCell id="99" value="Zokrates Deployment" style="swimlane;fillColor=#60a917;fontColor=#ffffff;strokeColor=#2D7600;fontSize=15;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="680" y="395" width="500" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="100" value="ZKts Pod 1" style="rounded=1;whiteSpace=wrap;html=1;" parent="99" vertex="1">
+                    <mxGeometry x="10" y="35" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="102" value="ZKts Pod M" style="rounded=1;whiteSpace=wrap;html=1;" parent="99" vertex="1">
+                    <mxGeometry x="370" y="35" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="110" value="..." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;" parent="99" vertex="1">
+                    <mxGeometry x="289.99692307692317" y="50" width="57.69230769230769" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="148" value="ZKts Pod 2" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="99">
+                    <mxGeometry x="147" y="35" width="120" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="122" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=default;startArrow=classic;startFill=1;" parent="1" source="121" target="94" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="600" y="475"/>
+                            <mxPoint x="600" y="270"/>
+                            <mxPoint x="930" y="270"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="121" value="Client" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontFamily=Helvetica;fontSize=12;fontColor=default;strokeColor=default;fillColor=default;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="445" width="30" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="K8S Namespace" style="text;strokeColor=none;fillColor=none;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;fontFamily=Helvetica;fontColor=default;container=1;" parent="1" vertex="1">
+                    <mxGeometry x="995.38" y="250" width="204.62" height="42.54" as="geometry"/>
+                </mxCell>
+                <mxCell id="149" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;startArrow=classic;startFill=1;" edge="1" parent="1" source="94" target="99">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="94" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Service&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d80073;fontColor=#ffffff;strokeColor=#A50040;strokeWidth=3;" parent="1" vertex="1">
+                    <mxGeometry x="680" y="300" width="500" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="156" style="edgeStyle=none;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontSize=18;startArrow=classic;startFill=1;" edge="1" parent="1" source="150" target="99">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="150" value="Zokrates PV (zfs)" style="swimlane;fillColor=#1ba1e2;fontColor=#ffffff;strokeColor=#006EAF;fontSize=15;strokeWidth=3;" vertex="1" parent="1">
+                    <mxGeometry x="680" y="550" width="500" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="161" value="..." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;" vertex="1" parent="150">
+                    <mxGeometry x="221.1569230769232" y="50" width="57.69230769230769" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="157" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;Proving key 1&lt;/font&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fontSize=18;size=34;" vertex="1" parent="1">
+                    <mxGeometry x="720" y="580" width="70" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="159" value="&lt;font style=&quot;font-size: 14px;&quot;&gt;Proving key N&lt;/font&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;fontSize=18;size=34;" vertex="1" parent="1">
+                    <mxGeometry x="1020" y="580" width="70" height="70" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
