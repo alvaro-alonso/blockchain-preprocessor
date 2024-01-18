@@ -22,7 +22,7 @@ spec:
       #   labelSelector:
       #     matchLabels:
       #       app: zokrates-api
-      # nodeName: knode4
+      nodeName: knode4
       containers:
       - name: zokrates
         image: alvaround/zokrates-api:0.1.0
@@ -31,14 +31,14 @@ spec:
         - name: ROCKET_LOG_LEVEL
           value: "normal"
         - name: ROCKET_WORKERS
-          value: "1"
+          value: "5"
         resources:
           requests:
-            memory: "10Mi"
-            cpu: "250m"
+            memory: "100Mi"
+            cpu: "2500m"
           # limits:
-          #   memory: "1Gi"
-          #   cpu: "500m"
+          #   memory: "12Gi"
+            # cpu: "5000m"
         volumeMounts:
         - name: zfs
           mountPath: /app/out

@@ -1,14 +1,14 @@
 # source code for sequence diagram on https://sequencediagram.org/
 
-==Once per Pogram==
+==Configuration (once per program)==
 Verifier<->Prover:setup ceremony
-Prover->Zokrates API:compile .zok program
-Prover<-Zokrates API:return <proof-id>
+Prover->Zokrates-API:POST /compile .zok program
+Prover<-Zokrates-API:return {program-hash, ABI} 
 
-Prover->Zokrates API:POST /<proof-id>/proving-key
-Prover<-Zokrates API:return ACK
+Prover->Zokrates-API:POST /{program hash}/proving-key
+Prover<-Zokrates-API:return ACK
 
-==Once per Proof==
-Prover->Zokrates API:POST /<proof-id>/compute-generate-proof
-Prover<-Zokrates API:return proof.json
+==Proving (once per proof)==
+Prover->Zokrates-API:POST /{program hash}/compute-generate-proof
+Prover<-Zokrates-API:return proof.json
 Verifier<-Prover:verify proof.json
