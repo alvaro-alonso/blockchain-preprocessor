@@ -49,6 +49,13 @@ tests = {
         "chunk_size": 10,
         "head": 1000,
     },
+    "input_num_fifteen_signatures": {
+        "proof_id": "ABCD",
+        "name": "input_num_fifteen_signatures",
+        "dest": os.getenv("CLUSTER_ADDRESS"),
+        "chunk_size": 15,
+        "head": 1005,
+    },
     "input_num_five_signatures": {
         "proof_id": "BDBA557991EC3F5415FC3362D9C7CBD12B78CDE47875B1CB637C4514F52AA08B",
         "name": "input_num_five_signatures",
@@ -125,6 +132,30 @@ tests = {
         "chunk_size": 5,
         "connections": 15,
     },
+    "cluster_signatures_four_replicas": {
+        "proof_id": "935C49E1AE1F05916BBD2B7053182F3D99C0D26DD6BD601145E5B6FECE872D62",
+        "name": "cluster_signatures_four_replicas",
+        "dest": os.getenv("CLUSTER_ADDRESS"),
+        "chunk_size": 1,
+        "connections": 10,
+        "head": 1000,
+    },
+    "cluster_signatures_ten_replicas": {
+        "proof_id": "935C49E1AE1F05916BBD2B7053182F3D99C0D26DD6BD601145E5B6FECE872D62",
+        "name": "cluster_signatures_ten_replicas",
+        "dest": os.getenv("CLUSTER_ADDRESS"),
+        "chunk_size": 1,
+        "connections": 10,
+        "head": 1000,
+    },
+    "cluster_signatures_twenty_replicas": {
+        "proof_id": "935C49E1AE1F05916BBD2B7053182F3D99C0D26DD6BD601145E5B6FECE872D62",
+        "name": "cluster_signatures_twenty_replicas",
+        "dest": os.getenv("CLUSTER_ADDRESS"),
+        "chunk_size": 1,
+        "connections": 25,
+        "head": 1000,
+    },
     "dataset_signatures_two_replicas": {
         "proof_id": "BDBA557991EC3F5415FC3362D9C7CBD12B78CDE47875B1CB637C4514F52AA08B",
         "name": "dataset_signatures_two_replicas",
@@ -132,6 +163,20 @@ tests = {
         "chunk_size": 5,
         "connections": 10,
     },
+    "constrain_test_square_sum": {
+        "proof_id": "87446ED898EAD75C208BCDB057A9F8EB20FF925F9D277C628F8CEA1F91F6A55E",
+        "name": "constrain_test_square_sum",
+        "dest": os.getenv("CLUSTER_ADDRESS"),
+        "chunk_size": 1,
+        "connections": 5,
+    },
+    "constrain_test_hashes": {
+        "proof_id": "9CB4F4D29D5353B89C055B3166B5E5A2906F7ED767E78213F9FA1B3F56F9F1FA",
+        "name": "constrain_test_hashes",
+        "dest": os.getenv("CLUSTER_ADDRESS"),
+        "chunk_size": 1,
+        "connections": 5,
+    }
 }
 
 if __name__ == '__main__':

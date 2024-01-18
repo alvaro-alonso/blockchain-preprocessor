@@ -15,7 +15,7 @@ struct SignatureWitness {
     u32[8] M1;
 }
 
-const u32 SIG_NUM = 1;
+const u32 SIG_NUM = 15;
 
 def signatureProof(SignatureWitness signature) -> bool {
     
@@ -32,3 +32,4 @@ def main(SignatureWitness[SIG_NUM] signatures) -> bool {
     }
     return true;
 }
+

@@ -1,57 +1,58 @@
 {
   "inputs": [
     {
-      "name": "sensorSignature",
-      "public": false,
-      "type": "struct",
+      "name": "signatures",
+      "public": true,
+      "type": "array",
       "components": {
-        "name": "SignatureWitness",
-        "generics": [],
-        "members": [
-          {
-            "name": "R",
-            "type": "array",
-            "components": {
-              "size": 2,
+        "size": 1,
+        "type": "struct",
+        "components": {
+          "name": "SignatureWitness",
+          "generics": [],
+          "members": [
+            {
+              "name": "R",
+              "type": "array",
+              "components": {
+                "size": 2,
+                "type": "field"
+              }
+            },
+            {
+              "name": "S",
               "type": "field"
+            },
+            {
+              "name": "A",
+              "type": "array",
+              "components": {
+                "size": 2,
+                "type": "field"
+              }
+            },
+            {
+              "name": "M0",
+              "type": "array",
+              "components": {
+                "size": 8,
+                "type": "u32"
+              }
+            },
+            {
+              "name": "M1",
+              "type": "array",
+              "components": {
+                "size": 8,
+                "type": "u32"
+              }
             }
-          },
-          {
-            "name": "S",
-            "type": "field"
-          },
-          {
-            "name": "A",
-            "type": "array",
-            "components": {
-              "size": 2,
-              "type": "field"
-            }
-          },
-          {
-            "name": "M0",
-            "type": "array",
-            "components": {
-              "size": 8,
-              "type": "u32"
-            }
-          },
-          {
-            "name": "M1",
-            "type": "array",
-            "components": {
-              "size": 8,
-              "type": "u32"
-            }
-          }
-        ]
+          ]
+        }
       }
     }
   ],
   "output": {
-    "type": "tuple",
-    "components": {
-      "elements": []
-    }
+    "type": "bool"
   }
 }

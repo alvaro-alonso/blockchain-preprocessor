@@ -26,6 +26,10 @@ typed-arena = "1.4.1"
 sha2 = "0.10"
 
 # open-api
-schemars = "0.8"
-okapi = { version = "0.6.0-alpha-1" }
-rocket_okapi = { version = "0.8.0-alpha-1", features = ["swagger"] }
+schemars = { version = "0.8", optional = true}
+okapi = { version = "0.6.0-alpha-1", optional = true }
+rocket_okapi = { version = "0.8.0-alpha-1", features = ["swagger"], optional = true}
+
+[features]
+
+openapi = ["dep:schemars", "dep:okapi", "dep:rocket_okapi"]
