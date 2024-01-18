@@ -3,7 +3,6 @@ FROM python:3.9.7-slim
 
 WORKDIR /usr/app/src
 
-
 COPY . ./
 
 RUN mkdir /usr/app/results

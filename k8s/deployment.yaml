@@ -23,6 +23,7 @@ spec:
       #     matchLabels:
       #       app: zokrates-api
       # nodeName: knode4
+
       containers:
       - name: zokrates
         image: alvaround/zokrates-api:0.1.0
